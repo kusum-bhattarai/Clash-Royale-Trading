@@ -1,0 +1,18 @@
+{
+  "name": "clash-royale-trading",
+  "version": "1.0.0",
+  "description": "High-performance card trading platform for Clash Royale",
+  "dependencies": [
+    "boost-asio",
+    "boost-beast",
+    "boost-system",
+    "boost-thread",
+    "nlohmann-json",
+    "gtest",
+    "libpqxx",
+    "hiredis",
+    "fmt",
+    "spdlog"
+  ],
+  "builtin-baseline": "d80785c4ee1df22a4119a3451452f59e978e06aa"
+}
