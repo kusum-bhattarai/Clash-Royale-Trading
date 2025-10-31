@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: clash_trading_postgres
+    environment:
+      POSTGRES_DB: clash_trading
+      POSTGRES_USER: clash_user
+      POSTGRES_PASSWORD: clash_pass_dev
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d  # Auto-run initialization scripts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clash_user -d clash_trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clash_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: clash_trading_redis
+    command: redis-server --appendonly yes --requirepass redis_pass_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clash_network
+
+  # pgAdmin (Database Management UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: clash_trading_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@clash.trading
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - clash_network
+    profiles:
+      - tools  
+
+  # Redis Commander (Redis Management UI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: clash_trading_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis_pass_dev
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - clash_network
+    profiles:
+      - tools  
+
+networks:
+  clash_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
