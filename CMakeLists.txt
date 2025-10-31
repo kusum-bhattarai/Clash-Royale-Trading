@@ -30,10 +30,9 @@ if(DEFINED ENV{VCPKG_ROOT})
         CACHE STRING "Vcpkg toolchain file")
 endif()
 
-# Find packages (will be added as I add dependencies)
-# find_package(Boost REQUIRED COMPONENTS system thread)
-# find_package(nlohmann_json REQUIRED)
-# find_package(GTest REQUIRED)
+# Find packages
+find_package(fmt CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -43,12 +42,11 @@ add_executable(clash_trading
     src/main.cpp
 )
 
-# Link libraries (will uncomment as I add dependencies)
-# target_link_libraries(clash_trading PRIVATE
-#     Boost::system
-#     Boost::thread
-#     nlohmann_json::nlohmann_json
-# )
+# Link libraries
+target_link_libraries(clash_trading PRIVATE
+    fmt::fmt
+    nlohmann_json::nlohmann_json
+)
 
 # Enable testing
 enable_testing()
