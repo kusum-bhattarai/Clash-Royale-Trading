@@ -40,6 +40,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Main executable (will add sources as I create them)
 add_executable(clash_trading
     src/main.cpp
+    src/utils/config.cpp
 )
 
 # Link libraries
