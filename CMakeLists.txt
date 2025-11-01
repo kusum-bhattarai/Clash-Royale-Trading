@@ -49,11 +49,9 @@ target_link_libraries(clash_trading PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-# Enable testing
+target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
 enable_testing()
-
-# Add subdirectories (need to create next)
-# add_subdirectory(tests)
+add_subdirectory(tests)
 
 # Print configuration summary
 message(STATUS "=== Clash Royale Trading Platform ===")

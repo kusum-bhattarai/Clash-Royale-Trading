@@ -1,0 +1,5 @@
+find_package(GTest REQUIRED)
+add_executable(test_order unit/test_order.cpp)
+target_link_libraries(test_order PRIVATE GTest::gtest GTest::gtest_main)
+target_include_directories(test_order PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME OrderTests COMMAND test_order)
