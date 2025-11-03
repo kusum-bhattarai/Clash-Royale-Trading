@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <random>
+#include <openssl/sha.h>
 
 namespace clash_trading {
 namespace core {
@@ -231,6 +232,7 @@ Trade OrderBook::create_trade(const Order& incoming, const Order& resting,
     trade.card_id = card_id_;
     trade.quantity = quantity;
     trade.price = price;
+    trade.total_value = price * quantity;
     trade.timestamp = std::chrono::system_clock::now();
     
     // Determine buyer and seller
@@ -245,7 +247,7 @@ Trade OrderBook::create_trade(const Order& incoming, const Order& resting,
         trade.buyer_order_id = resting.order_id;
         trade.seller_order_id = incoming.order_id;
     }
-    
+    trade.merkle_hash = trade.calculate_merkle_hash();
     return trade;
 }
 
@@ -265,6 +267,40 @@ std::string OrderBook::generate_trade_id() const {
     }
     
     return ss.str();
+}
+
+std::string Trade::calculate_merkle_hash() const {
+    // Concatenate all trade data for hashing
+    std::ostringstream oss;
+    oss << trade_id 
+        << buyer_id 
+        << seller_id 
+        << card_id 
+        << std::fixed << std::setprecision(2) << price 
+        << quantity 
+        << buyer_order_id 
+        << seller_order_id;
+    
+    std::string data = oss.str();
+    
+    // Calculate SHA-256 hash
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(data.c_str()), 
+           data.length(), 
+           hash);
+    
+    // Convert to hex string
+    std::ostringstream hex_stream;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        hex_stream << std::hex << std::setw(2) << std::setfill('0') 
+                   << static_cast<int>(hash[i]);
+    }
+    
+    return hex_stream.str();
+}
+
+bool Trade::verify_integrity() const {
+    return calculate_merkle_hash() == merkle_hash;
 }
 
 } // namespace core
