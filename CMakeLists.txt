@@ -33,6 +33,7 @@ endif()
 # Find packages
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(libpqxx CONFIG REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -47,6 +48,7 @@ add_executable(clash_trading
 target_link_libraries(clash_trading PRIVATE
     fmt::fmt
     nlohmann_json::nlohmann_json
+    libpqxx::pqxx
 )
 
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)

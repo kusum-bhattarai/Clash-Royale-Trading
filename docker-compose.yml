@@ -14,7 +14,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d  # Auto-run initialization scripts
+      - ./database/migrations:/docker-entrypoint-initdb.d  # Auto-run initialization scripts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U clash_user -d clash_trading"]
       interval: 10s
