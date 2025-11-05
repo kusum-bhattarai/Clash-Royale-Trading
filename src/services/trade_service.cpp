@@ -25,7 +25,7 @@ void TradeService::execute_trade(const core::Trade& trade) {
             // Record trade in immutable ledger
             record_trade(txn, trade);
             
-            // Transaction committed automatically by with_transaction
+            return 0;
         });
         
         // Future: Emit event for WebSocket broadcasting
@@ -50,6 +50,7 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
                               trade.card_id, trade.quantity);
                 record_trade(txn, trade);
             }
+            return 0;
         });
     } catch (const std::exception& e) {
         throw TradeExecutionException(
