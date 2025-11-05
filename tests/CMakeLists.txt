@@ -11,7 +11,11 @@ add_executable(test_order_book
     unit/test_order_book.cpp
     ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
 )
-target_link_libraries(test_order_book PRIVATE GTest::gtest GTest::gtest_main)
+target_link_libraries(test_order_book PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+    OpenSSL::Crypto  # ADD THIS - needed for SHA256 in Trade
+)
 target_include_directories(test_order_book PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME OrderBookTests COMMAND test_order_book)
 
@@ -27,3 +31,19 @@ target_link_libraries(test_postgres PRIVATE
 )
 target_include_directories(test_postgres PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME PostgresTests COMMAND test_postgres)
+
+# Test 4: TradeService
+add_executable(test_trade_service
+    unit/test_trade_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/trade_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
+)
+target_link_libraries(test_trade_service PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+    libpqxx::pqxx
+    OpenSSL::Crypto
+)
+target_include_directories(test_trade_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME TradeServiceTests COMMAND test_trade_service)
