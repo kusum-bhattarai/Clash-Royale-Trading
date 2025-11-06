@@ -47,3 +47,17 @@ target_link_libraries(test_trade_service PRIVATE
 )
 target_include_directories(test_trade_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME TradeServiceTests COMMAND test_trade_service)
+
+# Test 5: UserService
+add_executable(test_user_service
+    unit/test_user_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/user_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
+)
+target_link_libraries(test_user_service PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+    libpqxx::pqxx
+)
+target_include_directories(test_user_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME UserServiceTests COMMAND test_user_service)

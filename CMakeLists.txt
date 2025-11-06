@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+endif()
+
 # Project definition
 project(ClashRoyaleTrading 
     VERSION 1.0.0
