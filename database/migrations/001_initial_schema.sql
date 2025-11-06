@@ -73,6 +73,7 @@ CREATE TABLE trades (
     total_value DECIMAL(12,2) NOT NULL,
     buyer_order_id UUID REFERENCES orders(order_id),
     seller_order_id UUID REFERENCES orders(order_id),
+    merkle_hash VARCHAR(64) NOT NULL, 
     executed_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
