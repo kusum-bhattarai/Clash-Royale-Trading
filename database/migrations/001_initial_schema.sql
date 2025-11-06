@@ -8,7 +8,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     gold_balance BIGINT NOT NULL DEFAULT 100000,
-    trader_level VARCHAR(20) NOT NULL DEFAULT 'NOVICE',
+    trader_level VARCHAR(20) NOT NULL DEFAULT 'CHALLENGER',
     total_trades INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
