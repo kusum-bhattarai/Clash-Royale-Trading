@@ -19,11 +19,16 @@ struct Trade {
     std::string seller_id;
     double price;
     int quantity;
+    double total_value;          // price * quantity
     std::string buyer_order_id;
     std::string seller_order_id;
+    std::string merkle_hash;
     std::chrono::system_clock::time_point timestamp;
     
-    Trade() : price(0.0), quantity(0), timestamp(std::chrono::system_clock::now()) {}
+    Trade() : price(0.0), quantity(0), total_value(0.0), timestamp(std::chrono::system_clock::now()) {}
+
+    std::string calculate_merkle_hash() const;
+    bool verify_integrity() const;
 };
 
 // Snapshot of order book state for real-time updates

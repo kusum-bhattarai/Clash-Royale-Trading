@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+endif()
+
 # Project definition
 project(ClashRoyaleTrading 
     VERSION 1.0.0
@@ -33,6 +38,8 @@ endif()
 # Find packages
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(libpqxx CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -47,6 +54,7 @@ add_executable(clash_trading
 target_link_libraries(clash_trading PRIVATE
     fmt::fmt
     nlohmann_json::nlohmann_json
+    libpqxx::pqxx
 )
 
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
