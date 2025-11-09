@@ -61,3 +61,21 @@ target_link_libraries(test_user_service PRIVATE
 )
 target_include_directories(test_user_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME UserServiceTests COMMAND test_user_service)
+
+# Test 6: OrderService
+add_executable(test_order_service
+    unit/test_order_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/order_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/trade_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/user_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
+)
+target_link_libraries(test_order_service PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+    libpqxx::pqxx
+    OpenSSL::Crypto
+)
+target_include_directories(test_order_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME OrderServiceTests COMMAND test_order_service)
