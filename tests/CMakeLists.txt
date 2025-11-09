@@ -79,3 +79,18 @@ target_link_libraries(test_order_service PRIVATE
 )
 target_include_directories(test_order_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME OrderServiceTests COMMAND test_order_service)
+
+# Test 7: AuthService
+add_executable(test_auth
+    unit/test_auth.cpp
+    ${CMAKE_SOURCE_DIR}/src/api/auth.cpp
+)
+target_link_libraries(test_auth PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+    OpenSSL::Crypto
+    OpenSSL::SSL
+    nlohmann_json::nlohmann_json
+)
+target_include_directories(test_auth PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME AuthTests COMMAND test_auth)
