@@ -60,6 +60,8 @@ private:
     // CORS configuration
     bool enable_cors_;
     std::string allowed_origins_;
+
+    bool matches_pattern(const std::string& path, const std::string& pattern) const;
     
 public:
     HTTPServer(net::io_context& ioc, 

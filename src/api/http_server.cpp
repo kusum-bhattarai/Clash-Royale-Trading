@@ -166,7 +166,52 @@ std::string HTTPServer::get_route_key(http::verb method, const std::string& path
         ? path.substr(0, query_pos) 
         : path;
     
-    return std::string(http::to_string(method)) + " " + clean_path;
+    std::string method_str = std::string(http::to_string(method));
+    
+    // Try exact match first
+    std::string exact_key = method_str + " " + clean_path;
+    if (routes_.find(exact_key) != routes_.end()) {
+        return exact_key;
+    }
+    // Check for pattern matches (e.g., /users/{id})
+    for (const auto& [route_key, handler] : routes_) {
+        if (!route_key.starts_with(method_str + " ")) continue;
+        
+        std::string route_pattern = route_key.substr(method_str.length() + 1);
+        if (matches_pattern(clean_path, route_pattern)) {
+            return route_key;
+        }
+    }
+    
+    return method_str + " " + clean_path;
+}
+
+bool HTTPServer::matches_pattern(const std::string& path, const std::string& pattern) const {
+    // Split both path and pattern by '/'
+    auto split = [](const std::string& s) {
+        std::vector<std::string> parts;
+        size_t start = 0, end;
+        while ((end = s.find('/', start)) != std::string::npos) {
+            if (end > start) parts.push_back(s.substr(start, end - start));
+            start = end + 1;
+        }
+        if (start < s.length()) parts.push_back(s.substr(start));
+        return parts;
+    };
+    
+    auto path_parts = split(path);
+    auto pattern_parts = split(pattern);
+    
+    if (path_parts.size() != pattern_parts.size()) return false;
+    
+    for (size_t i = 0; i < path_parts.size(); ++i) {
+        // Pattern part starts with ':' means it's a parameter (matches anything)
+        if (pattern_parts[i][0] != ':' && path_parts[i] != pattern_parts[i]) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 void HTTPServer::add_cors_headers(http_response& res) {
