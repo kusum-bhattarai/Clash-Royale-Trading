@@ -8,6 +8,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <stdexcept>
+#include <functional>
 
 namespace clash_trading {
 namespace services {
@@ -54,6 +55,10 @@ private:
     std::unordered_map<std::string, std::shared_ptr<core::OrderBook>> order_books_;
     mutable std::shared_mutex order_books_mutex_;
 
+    // Callbacks for events
+    std::function<void(const std::string&, const core::OrderBookSnapshot&)> on_orderbook_update_;
+    std::function<void(const std::string&, const std::string&, const std::string&, int)> on_order_filled_;
+
 public:
     OrderService(std::shared_ptr<database::PostgresClient> db,
                  std::shared_ptr<TradeService> trade_service,
@@ -73,6 +78,17 @@ public:
     
     // Get current order book snapshot for a card
     core::OrderBookSnapshot get_order_book_snapshot(const std::string& card_id) const;
+
+    // Set event handlers
+    void set_orderbook_callback(
+        std::function<void(const std::string&, const core::OrderBookSnapshot&)> callback) {
+        on_orderbook_update_ = callback;
+    }
+
+    void set_order_filled_callback(
+        std::function<void(const std::string&, const std::string&, const std::string&, int)> callback) {
+        on_order_filled_ = callback;
+    }
     
 private:
     // Generate unique order ID
