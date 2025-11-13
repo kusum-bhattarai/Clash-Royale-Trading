@@ -13,6 +13,9 @@
 #include "api/http_server.hpp"
 #include "api/routes.hpp"
 
+#include "api/websocket.hpp"
+#include "api/event_broadcaster.hpp"
+
 using namespace clash_trading;
 namespace net = boost::asio; 
 
@@ -106,9 +109,51 @@ int main(int argc, char* argv[]) {
         
         // Start server
         http_server->run();
+
+        fmt::print("🔌 Starting WebSocket server...\n");
         
-        fmt::print("\n✅ Server ready on http://{}:{}\n", 
+        auto ws_server = std::make_shared<api::WebSocketServer>(
+            ioc,
+            config.server_host(),
+            8081  // WebSocket on port 8081
+        );
+        
+        ws_server->run();
+        fmt::print("✅ WebSocket server ready on ws://{}:{}\n\n", 
+                  config.server_host(), 8081);
+        
+        // Create event broadcaster
+        auto broadcaster = std::make_shared<api::EventBroadcaster>(ws_server);
+        
+        // CONNECT SERVICES TO BROADCASTER
+        
+        // Trade events -> WebSocket
+        trade_service->set_trade_callback([broadcaster](const core::Trade& trade) {
+            broadcaster->broadcast_trade(trade);
+            // Also broadcast portfolio updates to both users
+            broadcaster->broadcast_portfolio_update(trade.buyer_id);
+            broadcaster->broadcast_portfolio_update(trade.seller_id);
+        });
+        
+        // Order book events -> WebSocket
+        order_service->set_orderbook_callback(
+            [broadcaster](const std::string& card_id, const core::OrderBookSnapshot& snapshot) {
+                broadcaster->broadcast_orderbook(card_id, snapshot);
+            });
+        
+        // Order filled events -> WebSocket
+        order_service->set_order_filled_callback(
+            [broadcaster](const std::string& user_id, const std::string& order_id, 
+                         const std::string& status, int filled_qty) {
+                broadcaster->broadcast_order_filled(user_id, order_id, status, filled_qty);
+            });
+        
+        fmt::print("✅ Event broadcasting configured\n\n");
+        
+        fmt::print("\n✅ HTTP Server ready on http://{}:{}\n", 
                   config.server_host(), config.server_port());
+        fmt::print("✅ WebSocket Server ready on ws://{}:{}\n", 
+                  config.server_host(), 8081);
         fmt::print("Press Ctrl+C to stop\n\n");
         
         fmt::print("📡 Available endpoints:\n");
