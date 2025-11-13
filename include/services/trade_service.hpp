@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <functional>
 
 namespace clash_trading {
 namespace services {
@@ -19,9 +20,14 @@ public:
 class TradeService {
 private:
     std::shared_ptr<database::PostgresClient> db_;
+    std::function<void(const core::Trade&)> on_trade_executed_;
 
 public:
     explicit TradeService(std::shared_ptr<database::PostgresClient> db);
+
+    void set_trade_callback(std::function<void(const core::Trade&)> callback) {
+        on_trade_executed_ = callback;
+    }
     
     // Execute a single trade
     void execute_trade(const core::Trade& trade);
