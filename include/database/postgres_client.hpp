@@ -32,9 +32,14 @@ template<typename Func>
 auto PostgresClient::with_transaction(Func&& func) -> decltype(func(std::declval<pqxx::work&>())) {
     pqxx::work txn(*conn_);
     try {
-        auto result = func(txn);
-        txn.commit();
-        return result;
+        if constexpr (std::is_void_v<decltype(func(txn))>) {
+            func(txn);
+            txn.commit();
+        } else {
+            auto result = func(txn);
+            txn.commit();
+            return result;
+        }
     } catch (...) {
         txn.abort();
         throw;
