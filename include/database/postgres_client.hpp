@@ -19,6 +19,8 @@ public:
     
     // Test connection
     bool is_connected() const;
+
+    pqxx::connection* get_connection() { return conn_.get(); }
     
     // Execute raw query (for testing/setup)
     pqxx::result execute(const std::string& query);

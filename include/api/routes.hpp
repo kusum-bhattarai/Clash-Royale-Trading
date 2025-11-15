@@ -55,6 +55,10 @@ private:
     // Trade Routes
     void handle_get_user_trades(const http_request& req, http_response& res);
     void handle_get_trade(const http_request& req, http_response& res);
+
+    // Card Routes
+    void handle_get_all_cards(const http_request& req, http_response& res);
+    void handle_get_card_details(const http_request& req, http_response& res);
     
     
     // Extract user ID from JWT token in Authorization header

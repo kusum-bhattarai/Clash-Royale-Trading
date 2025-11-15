@@ -57,6 +57,12 @@ void APIRouter::register_routes() {
     // Trade routes
     server_->register_route(http::verb::get, "/api/trades/:tradeId",
         std::bind(&APIRouter::handle_get_trade, this, _1, _2));
+
+    // Card routes
+    server_->register_route(http::verb::get, "/api/cards",
+        std::bind(&APIRouter::handle_get_all_cards, this, _1, _2));
+    server_->register_route(http::verb::get, "/api/cards/:cardId",
+        std::bind(&APIRouter::handle_get_card_details, this, _1, _2));
     
     fmt::print("✅ All routes registered!\n\n");
 }
@@ -543,6 +549,89 @@ void APIRouter::send_error(http_response& res, http::status status, const std::s
     res.result(status);
     res.set(http::field::content_type, "application/json");
     res.body() = nlohmann::json{{"error", message}}.dump();
+}
+
+// Card Handlers
+void APIRouter::handle_get_all_cards(const http_request& req, http_response& res) {
+    try {
+        pqxx::work txn(*db_->get_connection());
+        auto result = txn.exec(
+            "SELECT card_id, name, rarity, elixir_cost, current_market_price, max_level FROM cards ORDER BY name"
+        );
+        
+        nlohmann::json cards_json = nlohmann::json::array();
+        
+        for (const auto& row : result) {
+            nlohmann::json card;
+            card["card_id"] = std::string(row["card_id"].c_str());
+            card["name"] = std::string(row["name"].c_str());
+            card["rarity"] = std::string(row["rarity"].c_str());
+            card["price"] = row["current_market_price"].as<double>();
+            card["max_level"] = row["max_level"].as<int>();
+            
+            if (row["elixir_cost"].is_null()) {
+                card["elixir_cost"] = nullptr;
+            } else {
+                card["elixir_cost"] = std::string(row["elixir_cost"].c_str());
+            }
+            
+            cards_json.push_back(std::move(card));
+        }
+        
+        txn.commit();
+        
+        std::string json_str = cards_json.dump();
+        res.result(http::status::ok);
+        res.set(http::field::content_type, "application/json");
+        res.body() = std::move(json_str);
+        res.prepare_payload();
+        
+    } catch (const std::exception& e) {
+        send_error(res, http::status::internal_server_error, e.what());
+    }
+}
+
+void APIRouter::handle_get_card_details(const http_request& req, http_response& res) {
+    fmt::print("[API] Fetching card details\n"); 
+    try {
+        std::string path = std::string(req.target());
+        size_t last_slash = path.find_last_of('/');
+        std::string card_id = path.substr(last_slash + 1);
+        
+        pqxx::work txn(*db_->get_connection());
+        
+        auto result = txn.exec(
+            "SELECT card_id, name, rarity, elixir_cost, current_market_price, "
+            "max_level, icon_url, total_supply, usage_rate, last_synced "
+            "FROM cards WHERE card_id = " + txn.quote(card_id)
+        );
+        
+        if (result.empty()) {
+            txn.commit();
+            send_error(res, http::status::not_found, "Card not found");
+            return;
+        }
+        
+        const auto& row = result[0];
+        nlohmann::json card_json = {
+            {"card_id", row["card_id"].c_str()},
+            {"name", row["name"].c_str()},
+            {"rarity", row["rarity"].c_str()},
+            {"elixir_cost", row["elixir_cost"].is_null() ? nullptr : row["elixir_cost"].c_str()},
+            {"current_market_price", row["current_market_price"].as<double>()},
+            {"max_level", row["max_level"].as<int>()},
+            {"icon_url", row["icon_url"].is_null() ? "" : row["icon_url"].c_str()},
+            {"total_supply", row["total_supply"].as<long>()},
+            {"usage_rate", row["usage_rate"].as<double>()},
+            {"last_synced", row["last_synced"].c_str()}
+        };
+        
+        txn.commit();
+        send_json(res, http::status::ok, card_json);
+        
+    } catch (const std::exception& e) {
+        send_error(res, http::status::internal_server_error, e.what());
+    }
 }
 
 } // namespace api
