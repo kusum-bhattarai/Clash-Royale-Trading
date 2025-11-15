@@ -34,13 +34,13 @@ int main(int argc, char* argv[]) {
         )" << std::endl;
         
         fmt::print("🏆 Clash Royale Trading Platform v1.0.0\n");
-        fmt::print("⚔️  High-Performance Card Trading Engine\n\n");
+        fmt::print("High-Performance Card Trading Engine\n\n");
         
         // Load configuration
         auto& config = clash::Config::instance();
         config.load_from_file(".env");
         
-        fmt::print("📋 Configuration:\n");
+        fmt::print("Configuration:\n");
         fmt::print("  Database: {}:{}/{}\n", 
                   config.postgres_config().host,
                   config.postgres_config().port,
@@ -53,38 +53,38 @@ int main(int argc, char* argv[]) {
                   config.server_port());
         
         // Initialize database connection
-        fmt::print("🔌 Connecting to PostgreSQL...\n");
+        fmt::print("Connecting to PostgreSQL...\n");
         auto db = std::make_shared<database::PostgresClient>(
             config.postgres_config().connection_string()
         );
         
         if (!db->is_connected()) {
-            fmt::print(stderr, "❌ Failed to connect to database!\n");
+            fmt::print(stderr, "Failed to connect to database!\n");
             return 1;
         }
-        fmt::print("✅ Database connected!\n\n");
+        fmt::print("Database connected!\n\n");
         
         // Initialize services
-        fmt::print("🔧 Initializing services...\n");
+        fmt::print("Initializing services...\n");
         
         auto trade_service = std::make_shared<services::TradeService>(db);
-        fmt::print("  ✅ TradeService ready\n");
+        fmt::print("  TradeService ready\n");
         
         auto user_service = std::make_shared<services::UserService>(db);
-        fmt::print("  ✅ UserService ready\n");
+        fmt::print("  UserService ready\n");
         
         auto order_service = std::make_shared<services::OrderService>(
             db, trade_service, user_service
         );
-        fmt::print("  ✅ OrderService ready\n");
+        fmt::print("  OrderService ready\n");
         
         auto auth_service = std::make_shared<api::AuthService>(
             config.jwt_secret()
         );
-        fmt::print("  ✅ AuthService ready\n\n");
+        fmt::print("  AuthService ready\n\n");
         
         // Create HTTP server
-        fmt::print("🌐 Starting HTTP server...\n");
+        fmt::print("Starting HTTP server...\n");
         
         net::io_context ioc{1};  // Single thread for now
         
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
         // Start server
         http_server->run();
 
-        fmt::print("🔌 Starting WebSocket server...\n");
+        fmt::print("Starting WebSocket server...\n");
         
         auto ws_server = std::make_shared<api::WebSocketServer>(
             ioc,
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
         );
         
         ws_server->run();
-        fmt::print("✅ WebSocket server ready on ws://{}:{}\n\n", 
+        fmt::print("WebSocket server ready on ws://{}:{}\n\n", 
                   config.server_host(), 8081);
         
         // Create event broadcaster
@@ -148,15 +148,15 @@ int main(int argc, char* argv[]) {
                 broadcaster->broadcast_order_filled(user_id, order_id, status, filled_qty);
             });
         
-        fmt::print("✅ Event broadcasting configured\n\n");
+        fmt::print("Event broadcasting configured\n\n");
         
-        fmt::print("\n✅ HTTP Server ready on http://{}:{}\n", 
+        fmt::print("\nHTTP Server ready on http://{}:{}\n", 
                   config.server_host(), config.server_port());
-        fmt::print("✅ WebSocket Server ready on ws://{}:{}\n", 
+        fmt::print("WebSocket Server ready on ws://{}:{}\n", 
                   config.server_host(), 8081);
         fmt::print("Press Ctrl+C to stop\n\n");
         
-        fmt::print("📡 Available endpoints:\n");
+        fmt::print("Available endpoints:\n");
         fmt::print("  POST   /api/auth/register    - Register new user\n");
         fmt::print("  POST   /api/auth/login       - Login user\n");
         fmt::print("  POST   /api/orders           - Place order\n");
@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
         ioc.run();
         
     } catch (const std::exception& e) {
-        fmt::print(stderr, "\n❌ Fatal error: {}\n", e.what());
+        fmt::print(stderr, "\nFatal error: {}\n", e.what());
         return 1;
     }
     
