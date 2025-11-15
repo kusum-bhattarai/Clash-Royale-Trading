@@ -9,9 +9,11 @@
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
+#include "services/card_sync_service.hpp"
 #include "api/auth.hpp"
 #include "api/http_server.hpp"
 #include "api/routes.hpp"
+#include "external/clash_royale_api.hpp"
 
 #include "api/websocket.hpp"
 #include "api/event_broadcaster.hpp"
@@ -82,6 +84,28 @@ int main(int argc, char* argv[]) {
             config.jwt_secret()
         );
         fmt::print("  AuthService ready\n\n");
+
+        // Initialize Clash Royale API
+        fmt::print("[INIT] Initializing Clash Royale integration\n");
+        auto cr_config = config.clash_royale_api_config();
+        auto cr_api = std::make_shared<external::ClashRoyaleAPI>(
+            cr_config.base_url,
+            cr_config.api_key,
+            cr_config.rate_limit_per_second,
+            cr_config.timeout_seconds
+        );
+        
+        auto card_sync = std::make_shared<services::CardSyncService>(db, cr_api);
+        
+        // Sync cards on startup if database is empty
+        int card_count = card_sync->get_card_count();
+        if (card_count == 0) {
+            fmt::print("  [INFO] No cards found. Syncing from API\n");
+            card_sync->sync_all_cards();
+        } else {
+            fmt::print("  [OK] Database has {} cards\n", card_count);
+        }
+        fmt::print("\n");
         
         // Create HTTP server
         fmt::print("Starting HTTP server...\n");
