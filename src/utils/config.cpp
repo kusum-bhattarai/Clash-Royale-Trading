@@ -123,4 +123,13 @@ Config::RedisConfig Config::redis_config() const {
     };
 }
 
+Config::ClashRoyaleAPIConfig Config::clash_royale_api_config() const {
+    return ClashRoyaleAPIConfig{
+        .base_url = get("CLASH_ROYALE_API_BASE_URL", "https://api.clashroyale.com/v1"),
+        .api_key = get("CLASH_ROYALE_API_KEY", ""),
+        .rate_limit_per_second = get_int("CLASH_ROYALE_RATE_LIMIT", 8),
+        .timeout_seconds = get_int("CLASH_ROYALE_TIMEOUT", 10)
+    };
+}
+
 } // namespace clash

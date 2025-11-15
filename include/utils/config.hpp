@@ -54,6 +54,15 @@ public:
     // JWT
     std::string jwt_secret() const { return get("JWT_SECRET", "change_me"); }
 
+    struct ClashRoyaleAPIConfig {
+        std::string base_url;
+        std::string api_key;
+        int rate_limit_per_second;
+        int timeout_seconds;
+    };
+
+    ClashRoyaleAPIConfig clash_royale_api_config() const;
+
 private:
     Config() = default;
     std::unordered_map<std::string, std::string> config_map_;

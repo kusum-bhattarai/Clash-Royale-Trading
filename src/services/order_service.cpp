@@ -64,6 +64,22 @@ PlaceOrderResponse OrderService::place_order(const PlaceOrderRequest& request) {
     
     // Update order status in database
     update_order_status(order.order_id, order.status, order.filled_quantity);
+
+    // Broadcast order book update
+    if (on_orderbook_update_) {
+        auto snapshot = order_book->get_snapshot();
+        on_orderbook_update_(request.card_id, snapshot);
+    }
+    
+    // Notify user if order was filled
+    if (on_order_filled_ && order.filled_quantity > 0) {
+        on_order_filled_(
+            request.user_id,
+            order.order_id,
+            core::order_status_to_string(order.status),
+            order.filled_quantity
+        );
+    }
     
     // Build response
     response.order_id = order.order_id;
@@ -107,6 +123,11 @@ bool OrderService::cancel_order(const std::string& order_id, const std::string& 
     // Update status in database
     if (removed) {
         update_order_status(order_id, core::OrderStatus::CANCELLED, order.filled_quantity);
+
+        if (on_orderbook_update_) {
+            auto snapshot = order_book->get_snapshot();
+            on_orderbook_update_(order.card_id, snapshot);
+        }
     }
     
     return removed;

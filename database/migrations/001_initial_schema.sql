@@ -22,7 +22,7 @@ CREATE TABLE cards (
     card_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     rarity VARCHAR(20) NOT NULL,
-    elixir_cost INT,
+    elixir_cost VARCHAR(10),
     card_type VARCHAR(20),
     current_market_price DECIMAL(10,2),
     total_supply BIGINT DEFAULT 0,

@@ -19,6 +19,8 @@ public:
     
     // Test connection
     bool is_connected() const;
+
+    pqxx::connection* get_connection() { return conn_.get(); }
     
     // Execute raw query (for testing/setup)
     pqxx::result execute(const std::string& query);
@@ -32,9 +34,14 @@ template<typename Func>
 auto PostgresClient::with_transaction(Func&& func) -> decltype(func(std::declval<pqxx::work&>())) {
     pqxx::work txn(*conn_);
     try {
-        auto result = func(txn);
-        txn.commit();
-        return result;
+        if constexpr (std::is_void_v<decltype(func(txn))>) {
+            func(txn);
+            txn.commit();
+        } else {
+            auto result = func(txn);
+            txn.commit();
+            return result;
+        }
     } catch (...) {
         txn.abort();
         throw;

@@ -28,7 +28,10 @@ void TradeService::execute_trade(const core::Trade& trade) {
             return 0;
         });
         
-        // Future: Emit event for WebSocket broadcasting
+        // Emit event for WebSocket broadcasting
+        if (on_trade_executed_) {
+            on_trade_executed_(trade);
+        }
         
     } catch (const std::exception& e) {
         // Transaction automatically rolled back by with_transaction
@@ -52,6 +55,13 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
             }
             return 0;
         });
+        
+        if (on_trade_executed_) {
+            for (const auto& trade : trades) {
+                on_trade_executed_(trade);
+            }
+        }
+
     } catch (const std::exception& e) {
         throw TradeExecutionException(
             "Failed to execute batch of " + std::to_string(trades.size()) + 

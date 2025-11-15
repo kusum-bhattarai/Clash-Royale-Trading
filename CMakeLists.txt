@@ -40,21 +40,40 @@ find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(CURL REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Main executable (will add sources as I create them)
+# Main executable
 add_executable(clash_trading
     src/main.cpp
     src/utils/config.cpp
+    src/core/order_book.cpp
+    src/database/postgres_client.cpp
+    src/services/order_service.cpp
+    src/services/trade_service.cpp
+    src/services/user_service.cpp
+    src/services/card_sync_service.cpp
+    src/api/auth.cpp
+    src/api/http_server.cpp
+    src/api/routes.cpp
+    src/api/websocket.cpp
+    src/external/clash_royale_api.cpp
 )
+
+# Find Boost (needed for Beast)
+find_package(Boost REQUIRED COMPONENTS system)
 
 # Link libraries
 target_link_libraries(clash_trading PRIVATE
     fmt::fmt
     nlohmann_json::nlohmann_json
     libpqxx::pqxx
+    OpenSSL::Crypto
+    OpenSSL::SSL
+    Boost::system
+    CURL::libcurl
 )
 
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
