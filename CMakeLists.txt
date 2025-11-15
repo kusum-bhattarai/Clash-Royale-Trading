@@ -56,6 +56,7 @@ add_executable(clash_trading
     src/api/auth.cpp
     src/api/http_server.cpp
     src/api/routes.cpp
+    src/api/websocket.cpp
 )
 
 # Find Boost (needed for Beast)
