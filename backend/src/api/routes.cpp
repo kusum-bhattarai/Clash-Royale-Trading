@@ -76,9 +76,51 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
         std::string email = body["email"];
         std::string password = body["password"];
         
-        // Validate input
+        // Check required fields
         if (username.empty() || email.empty() || password.empty()) {
-            send_error(res, http::status::bad_request, "Missing required fields");
+            send_error(res, http::status::bad_request, "All fields are required");
+            return;
+        }
+        
+        // Username validation
+        if (username.length() < 3 || username.length() > 20) {
+            send_error(res, http::status::bad_request, "Username must be 3-20 characters");
+            return;
+        }
+        
+        // Email validation (basic)
+        if (email.find('@') == std::string::npos) {
+            send_error(res, http::status::bad_request, "Invalid email format");
+            return;
+        }
+        
+        // Password strength
+        if (password.length() < 8) {
+            send_error(res, http::status::bad_request, "Password must be at least 8 characters");
+            return;
+        }
+        
+        // Check if username already exists (DATABASE CHECK)
+        auto existing_user = db_->with_transaction([&](pqxx::work& txn) {
+            return txn.exec_params(
+                "SELECT user_id FROM users WHERE username = $1 LIMIT 1",
+                username
+            );
+        });
+        if (!existing_user.empty()) {
+            send_error(res, http::status::conflict, "Username already taken");
+            return;
+        }
+        
+        // Check if email already exists
+        auto existing_email = db_->with_transaction([&](pqxx::work& txn) {
+            return txn.exec_params(
+                "SELECT user_id FROM users WHERE email = $1 LIMIT 1",
+                email
+            );
+        });
+        if (!existing_email.empty()) {
+            send_error(res, http::status::conflict, "Email already registered");
             return;
         }
         
@@ -93,12 +135,13 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
         std::string user_id(uuid_str);
         
         // Insert user into database
-        std::string query = 
-            "INSERT INTO users (user_id, username, email, password_hash, gold_balance) "
-            "VALUES ('" + user_id + "', '" + username + "', '" + email + "', '" + 
-            password_hash + "', 100000)";
-        
-        db_->execute(query);
+        db_->with_transaction([&](pqxx::work& txn) {
+            txn.exec_params(
+                "INSERT INTO users (user_id, username, email, password_hash, gold_balance) "
+                "VALUES ($1, $2, $3, $4, 100000)",
+                user_id, username, email, password_hash
+            );
+        });
         
         // Generate JWT
         std::string token = auth_service_->generate_jwt(user_id, username);
@@ -633,6 +676,8 @@ void APIRouter::handle_get_card_details(const http_request& req, http_response& 
         send_error(res, http::status::internal_server_error, e.what());
     }
 }
+
+
 
 } // namespace api
 } // namespace clash_trading
