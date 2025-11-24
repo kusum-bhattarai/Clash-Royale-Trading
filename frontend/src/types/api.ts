@@ -39,8 +39,9 @@ export interface Card {
   rarity: string;
   elixir_cost?: number;        // Optional because some cards don't have elixir cost
   max_level: number;
-  icon_url: string;
-  current_market_price: number;
+  icon_url?: string;
+  price: number;
+  current_market_price?: number;
   total_supply: number;
   usage_rate: number;
 }
@@ -123,6 +124,7 @@ export interface OrderBookSnapshot {
   card_id: string;
   bids: [number, number][]; // Array of [price, quantity]
   asks: [number, number][]; // Array of [price, quantity]
+  spread?: number; 
 }
 
 // Represents a user's trading statistics

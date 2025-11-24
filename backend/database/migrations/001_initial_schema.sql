@@ -24,6 +24,8 @@ CREATE TABLE cards (
     rarity VARCHAR(20) NOT NULL,
     elixir_cost VARCHAR(10),
     card_type VARCHAR(20),
+    max_level INT,
+    icon_url TEXT,
     current_market_price DECIMAL(10,2),
     total_supply BIGINT DEFAULT 0,
     usage_rate DECIMAL(5,4),
