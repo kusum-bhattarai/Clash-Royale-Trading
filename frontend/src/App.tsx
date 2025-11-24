@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Trading from './pages/Trading'; 
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -32,6 +33,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Trading page route */}
+        <Route
+          path="/trading"
+          element={
+            <ProtectedRoute>
+              <Trading />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Fallback route for undefined paths */}
         <Route 
           path="*" 

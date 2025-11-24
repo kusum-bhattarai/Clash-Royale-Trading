@@ -95,27 +95,20 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Coming Soon Section */}
+        {/* Trading Actions */}
         <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-xl p-8">
-          <h3 className="text-2xl font-bold text-white mb-4">Coming Soon 🚀</h3>
-          <div className="grid md:grid-cols-2 gap-4 text-slate-300">
-            <div>
-              <p className="font-semibold text-white mb-2">📊 Trading Interface</p>
-              <p className="text-sm">View order books and place trades</p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">💼 Portfolio Manager</p>
-              <p className="text-sm">Track your card holdings and P&L</p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">🏆 Leaderboards</p>
-              <p className="text-sm">Compete with other traders</p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">📈 Real-Time Charts</p>
-              <p className="text-sm">Live price updates via WebSocket</p>
-            </div>
-          </div>
+          <h3 className="text-2xl font-bold text-white mb-4">Start Trading</h3>
+          <p className="text-slate-300 mb-6">
+            Trade all 121 Clash Royale cards on the live marketplace
+          </p>
+          <button
+            onClick={() => navigate('/trading')}
+            className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 
+                     text-white font-bold rounded-lg shadow-lg hover:from-orange-600 
+                     hover:to-orange-700 transform hover:scale-105 transition-all"
+          >
+            Open Trading Interface
+          </button>
         </div>
       </div>
     </div>
