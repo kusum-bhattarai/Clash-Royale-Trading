@@ -17,10 +17,34 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
+            <div className="flex items-center gap-6">
               <h1 className="text-2xl font-bold text-white">
                 Clash Trading
               </h1>
+              
+              {/* Navigation Links */}
+              <div className="hidden md:flex gap-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 text-white font-semibold border-b-2 border-purple-500"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => navigate('/trading')}
+                  className="px-4 py-2 text-slate-300 hover:text-white font-semibold 
+                           hover:border-b-2 hover:border-orange-500 transition"
+                >
+                  Trading
+                </button>
+                <button
+                  onClick={() => navigate('/portfolio')}
+                  className="px-4 py-2 text-slate-300 hover:text-white font-semibold 
+                           hover:border-b-2 hover:border-blue-500 transition"
+                >
+                  Portfolio
+                </button>
+              </div>
             </div>
 
             {/* User Info & Logout */}
@@ -54,7 +78,7 @@ export default function Dashboard() {
         {/* Welcome Card */}
         <div className="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-2xl p-8 mb-8">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Welcome to Clash Royale Trading! 🎮
+            Welcome to Clash Royale Trading!
           </h2>
           <p className="text-slate-300 text-lg">
             Your account is active. You have{' '}
@@ -95,20 +119,39 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Trading Actions */}
-        <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-xl p-8">
-          <h3 className="text-2xl font-bold text-white mb-4">Start Trading</h3>
-          <p className="text-slate-300 mb-6">
-            Trade all 121 Clash Royale cards on the live marketplace
-          </p>
-          <button
-            onClick={() => navigate('/trading')}
-            className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 
-                     text-white font-bold rounded-lg shadow-lg hover:from-orange-600 
-                     hover:to-orange-700 transform hover:scale-105 transition-all"
-          >
-            Open Trading Interface
-          </button>
+        {/* Quick Actions Grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Trading Card */}
+          <div className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 border border-orange-500/30 rounded-xl p-8">
+            <h3 className="text-2xl font-bold text-white mb-4">Start Trading</h3>
+            <p className="text-slate-300 mb-6">
+              Trade all 121 Clash Royale cards on the live marketplace
+            </p>
+            <button
+              onClick={() => navigate('/trading')}
+              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 
+                       text-white font-bold rounded-lg shadow-lg hover:from-orange-600 
+                       hover:to-orange-700 transform hover:scale-105 transition-all"
+            >
+              Open Trading Interface
+            </button>
+          </div>
+
+          {/* Portfolio Card */}
+          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-8">
+            <h3 className="text-2xl font-bold text-white mb-4">View Portfolio</h3>
+            <p className="text-slate-300 mb-6">
+              Track your holdings, P&L, and active orders
+            </p>
+            <button
+              onClick={() => navigate('/portfolio')}
+              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 
+                       text-white font-bold rounded-lg shadow-lg hover:from-blue-600 
+                       hover:to-purple-700 transform hover:scale-105 transition-all"
+            >
+              View My Portfolio
+            </button>
+          </div>
         </div>
       </div>
     </div>
