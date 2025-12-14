@@ -175,12 +175,14 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
             return;
         }
         
-        // Get user from database
-        std::string query = 
-            "SELECT user_id, username, password_hash FROM users WHERE username = '" + 
-            username + "'";
-        
-        pqxx::result result = db_->execute(query);
+        // Using parameterized query to prevent SQL injection
+        auto result = db_->with_transaction([&](pqxx::work& txn) {
+            return txn.exec_params(
+                "SELECT user_id, username, password_hash, email, gold_balance, "
+                "trader_level, total_trades FROM users WHERE username = $1",
+                username
+            );
+        });
         
         if (result.empty()) {
             send_error(res, http::status::unauthorized, "Invalid credentials");
@@ -199,11 +201,16 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
         // Generate JWT
         std::string token = auth_service_->generate_jwt(user_id, username);
         
+        // Return complete user object (frontend needs gold_balance)
         nlohmann::json response_data = {
             {"token", token},
             {"user", {
                 {"user_id", user_id},
-                {"username", username}
+                {"username", username},
+                {"email", result[0]["email"].as<std::string>()},
+                {"gold_balance", result[0]["gold_balance"].as<int64_t>()},
+                {"trader_level", result[0]["trader_level"].as<std::string>()},
+                {"total_trades", result[0]["total_trades"].as<int>()}
             }}
         };
         
