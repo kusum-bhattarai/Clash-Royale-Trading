@@ -21,26 +21,40 @@ export default function PortfolioPage() {
   }, [user]);
 
   const loadPortfolioData = async () => {
-    if (!user) return;
+  if (!user) return;
 
-    setLoading(true);
-    setError('');
+  setLoading(true);
+  setError('');
 
-    try {
-      const [portfolioData, ordersData] = await Promise.all([
-        usersAPI.getPortfolio(user.user_id),
-        usersAPI.getOrders(user.user_id),
-      ]);
+  try {
+    console.log('[Portfolio] Loading data for user:', user.user_id);
+    
+    const [portfolioData, ordersResponse] = await Promise.all([
+      usersAPI.getPortfolio(user.user_id),
+      usersAPI.getOrders(user.user_id),
+    ]);
 
-      setPortfolio(portfolioData);
-      setOrders(ordersData);
-    } catch (err: any) {
-      console.error('Failed to load portfolio:', err);
-      setError('Failed to load portfolio data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log('[Portfolio] Portfolio data:', portfolioData);
+    console.log('[Portfolio] Orders response:', ordersResponse);
+
+    setPortfolio(portfolioData);
+    
+    // Handle both array and object responses
+    const ordersArray = Array.isArray(ordersResponse) 
+      ? ordersResponse 
+      : (ordersResponse as any).orders || [];
+    
+    console.log('[Portfolio] Orders array:', ordersArray);
+    setOrders(ordersArray);
+    
+  } catch (err: any) {
+    console.error('[Portfolio] Failed to load portfolio:', err);
+    console.error('[Portfolio] Error response:', err.response?.data);
+    setError('Failed to load portfolio data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCancelOrder = async (orderId: string) => {
     setCancellingOrderId(orderId);
