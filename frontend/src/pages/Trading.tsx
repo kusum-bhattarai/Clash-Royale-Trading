@@ -100,11 +100,11 @@ export default function Trading() {
       
       // Reload data
       loadOrderBook(selectedCard.card_id);
-      await refreshUser();  // ADD THIS - Updates balance
+      await refreshUser();  
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      console.error('Order error:', err);  // ADD THIS for debugging
+      console.error('Order error:', err);  
       const message = err.response?.data?.error || err.message || 'Failed to place order';
       setError(message);
       setTimeout(() => setError(''), 5000);
