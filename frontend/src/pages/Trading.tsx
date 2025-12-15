@@ -3,10 +3,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { cardsAPI, ordersAPI } from '../services/api';
 import type { Card, OrderBookSnapshot, OrderType, OrderMode } from '../types/api';
+import { useWebSocket } from '../contexts/WebSocketContext';
 
 export default function Trading() {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const ws = useWebSocket();
   
   const [cards, setCards] = useState<Card[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -33,6 +35,68 @@ export default function Trading() {
       loadCardDetail(selectedCard.card_id);
     }
   }, [selectedCard]);
+
+  // WebSocket: Subscribe to order book updates for selected card
+  useEffect(() => {
+    if (!selectedCard) return;
+
+    const channel = `orderbook:${selectedCard.card_id}`;
+  
+    console.log('[Trading] Subscribing to WebSocket channel:', channel);
+    ws.subscribe(channel);
+
+    // Listen for order book updates
+    const handleOrderBookUpdate = (data: any) => {
+      console.log('[Trading] Order book update received:', data);
+      if (data.card_id === selectedCard.card_id) {
+        setOrderBook({
+          card_id: data.card_id,
+          bids: data.bids || [],
+          asks: data.asks || [],
+        });
+      }
+    };
+
+    ws.on('orderbook_update', handleOrderBookUpdate);
+
+    // Cleanup on unmount or when card changes
+    return () => {
+      console.log('[Trading] Unsubscribing from:', channel);
+      ws.unsubscribe(channel);
+      ws.off('orderbook_update', handleOrderBookUpdate);
+    };
+  }, [selectedCard, ws]);
+
+  // WebSocket: Subscribe to trade notifications
+  useEffect(() => {
+    if (!user) return;
+
+    // Listen for trades
+    const handleTradeExecuted = (data: any) => {
+      console.log('[Trading] Trade executed:', data);
+      // Show a notification or update UI
+      if (selectedCard && data.card_id === selectedCard.card_id) {
+        // Reload order book after trade
+        loadOrderBook(selectedCard.card_id);
+      }
+    };
+
+    ws.on('trade_executed', handleTradeExecuted);
+
+    // Listen for portfolio updates
+    const handlePortfolioUpdate = (data: any) => {
+      console.log('[Trading] Portfolio update:', data);
+      // Refresh user balance
+    refreshUser();
+  };
+
+    ws.on('portfolio_update', handlePortfolioUpdate);
+
+    return () => {
+      ws.off('trade_executed', handleTradeExecuted);
+      ws.off('portfolio_update', handlePortfolioUpdate);
+    };
+  }, [user, selectedCard, ws, refreshUser]);
 
   const loadCardDetail = async (cardId: string) => {
     try {
