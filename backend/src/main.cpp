@@ -18,6 +18,8 @@
 #include "api/websocket.hpp"
 #include "api/event_broadcaster.hpp"
 
+#include "core/candle.hpp"
+
 using namespace clash_trading;
 namespace net = boost::asio; 
 

@@ -141,7 +141,7 @@ TradingStats UserService::get_trading_stats(const std::string& user_id) const {
 
 std::string UserService::calculate_trader_level(int total_trades) {
     if (total_trades >= 10001) {
-        return "ULTIMATE_CHAMPION";
+        return "ULTIMATE_CHAMPION";  // Highest rank in CR
     } else if (total_trades >= 2001) {
         return "GRAND_CHAMPION";
     } else if (total_trades >= 501) {
