@@ -55,6 +55,7 @@ add_executable(clash_trading
     src/services/trade_service.cpp
     src/services/user_service.cpp
     src/services/card_sync_service.cpp
+    src/services/price_aggregation_service.cpp
     src/api/auth.cpp
     src/api/http_server.cpp
     src/api/routes.cpp

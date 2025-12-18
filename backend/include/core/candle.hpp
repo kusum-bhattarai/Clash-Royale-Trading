@@ -82,6 +82,18 @@ struct CandleBuffer {
     int trade_count;
     bool has_data;
 
+    CandleBuffer()
+        : card_id("")
+        , timeframe(Timeframe::ONE_MINUTE)
+        , open_price(0.0)
+        , high_price(0.0)
+        , low_price(0.0)
+        , close_price(0.0)
+        , volume(0)
+        , trade_count(0)
+        , has_data(false)
+    {}
+
     CandleBuffer(const std::string& card_id, Timeframe tf)
         : card_id(card_id)
         , timeframe(tf)
