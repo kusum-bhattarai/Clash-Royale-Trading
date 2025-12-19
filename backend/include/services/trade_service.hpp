@@ -2,6 +2,7 @@
 
 #include "core/order_book.hpp"
 #include "database/postgres_client.hpp"
+#include "services/price_aggregation_service.hpp"
 #include <vector>
 #include <memory>
 #include <stdexcept>
@@ -21,9 +22,13 @@ class TradeService {
 private:
     std::shared_ptr<database::PostgresClient> db_;
     std::function<void(const core::Trade&)> on_trade_executed_;
+    std::shared_ptr<PriceAggregationService> price_agg_service_;
 
 public:
-    explicit TradeService(std::shared_ptr<database::PostgresClient> db);
+    explicit TradeService(
+        std::shared_ptr<database::PostgresClient> db,
+        std::shared_ptr<PriceAggregationService> price_agg_service
+    );
 
     void set_trade_callback(std::function<void(const core::Trade&)> callback) {
         on_trade_executed_ = callback;

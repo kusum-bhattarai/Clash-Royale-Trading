@@ -4,8 +4,12 @@
 namespace clash_trading {
 namespace services {
 
-TradeService::TradeService(std::shared_ptr<database::PostgresClient> db) 
-    : db_(db) {}
+TradeService::TradeService(
+    std::shared_ptr<database::PostgresClient> db,
+    std::shared_ptr<PriceAggregationService> price_agg_service
+) 
+    : db_(db)
+    , price_agg_service_(price_agg_service) {}
 
 void TradeService::execute_trade(const core::Trade& trade) {
     try {
@@ -31,6 +35,15 @@ void TradeService::execute_trade(const core::Trade& trade) {
         // Emit event for WebSocket broadcasting
         if (on_trade_executed_) {
             on_trade_executed_(trade);
+        }
+
+        if (price_agg_service_) {
+            price_agg_service_->on_trade(
+                trade.card_id,
+                trade.price,
+                trade.quantity,
+                std::chrono::system_clock::now()
+            );
         }
         
     } catch (const std::exception& e) {
@@ -59,6 +72,17 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
         if (on_trade_executed_) {
             for (const auto& trade : trades) {
                 on_trade_executed_(trade);
+            }
+        }
+
+        if (price_agg_service_) {
+            for (const auto& trade : trades) {
+                price_agg_service_->on_trade(
+                    trade.card_id,
+                    trade.price,
+                    trade.quantity,
+                    std::chrono::system_clock::now()
+                );
             }
         }
 
