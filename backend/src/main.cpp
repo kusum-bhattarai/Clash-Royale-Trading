@@ -132,7 +132,8 @@ int main(int argc, char* argv[]) {
             db,
             order_service,
             trade_service,
-            user_service
+            user_service,
+            price_agg_service
         );
         
         router.register_routes();

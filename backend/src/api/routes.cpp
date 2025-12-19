@@ -11,13 +11,15 @@ APIRouter::APIRouter(std::shared_ptr<HTTPServer> server,
                      std::shared_ptr<database::PostgresClient> db,
                      std::shared_ptr<services::OrderService> order_service,
                      std::shared_ptr<services::TradeService> trade_service,
-                     std::shared_ptr<services::UserService> user_service)
+                     std::shared_ptr<services::UserService> user_service,
+                     std::shared_ptr<services::PriceAggregationService> price_agg_service)
     : server_(server)
     , auth_service_(auth_service)
     , db_(db)
     , order_service_(order_service)
     , trade_service_(trade_service)
-    , user_service_(user_service) {}
+    , user_service_(user_service)
+    , price_agg_service_(price_agg_service) {}
 
 void APIRouter::register_routes() {
     using namespace std::placeholders;
@@ -63,8 +65,12 @@ void APIRouter::register_routes() {
         std::bind(&APIRouter::handle_get_all_cards, this, _1, _2));
     server_->register_route(http::verb::get, "/api/cards/:cardId",
         std::bind(&APIRouter::handle_get_card_details, this, _1, _2));
+
+    // Price/Candle routes 
+    server_->register_route(http::verb::get, "/api/cards/:cardId/candles",
+        std::bind(&APIRouter::handle_get_candles, this, _1, _2));
     
-    fmt::print("✅ All routes registered!\n\n");
+    fmt::print(" All routes registered!\n\n");
 }
 
 // Auth Handlers
@@ -684,7 +690,91 @@ void APIRouter::handle_get_card_details(const http_request& req, http_response& 
     }
 }
 
-
+// Price/Candle Handler
+void APIRouter::handle_get_candles(const http_request& req, http_response& res) {
+    try {
+        // Extract card ID from path: /api/cards/:cardId/candles
+        std::string path = std::string(req.target());
+        
+        // Remove query string if present
+        size_t query_pos = path.find('?');
+        std::string path_without_query = (query_pos != std::string::npos) 
+            ? path.substr(0, query_pos) 
+            : path;
+        
+        // Extract card_id (between /cards/ and /candles)
+        size_t cards_pos = path_without_query.find("/cards/");
+        size_t candles_pos = path_without_query.find("/candles");
+        std::string card_id = path_without_query.substr(
+            cards_pos + 7,  // Length of "/cards/"
+            candles_pos - (cards_pos + 7)
+        );
+        
+        // Parse query parameters
+        std::string timeframe_str = "1m";  // Default
+        int limit = 500;  // Default
+        
+        if (query_pos != std::string::npos) {
+            std::string query_string = path.substr(query_pos + 1);
+            
+            // Simple query parameter parsing
+            size_t pos = 0;
+            while (pos < query_string.length()) {
+                size_t eq_pos = query_string.find('=', pos);
+                if (eq_pos == std::string::npos) break;
+                
+                size_t amp_pos = query_string.find('&', eq_pos);
+                if (amp_pos == std::string::npos) amp_pos = query_string.length();
+                
+                std::string key = query_string.substr(pos, eq_pos - pos);
+                std::string value = query_string.substr(eq_pos + 1, amp_pos - eq_pos - 1);
+                
+                if (key == "timeframe") {
+                    timeframe_str = value;
+                } else if (key == "limit") {
+                    limit = std::stoi(value);
+                }
+                
+                pos = amp_pos + 1;
+            }
+        }
+        
+        // Convert timeframe string to enum
+        trading::Timeframe timeframe = trading::string_to_timeframe(timeframe_str);
+        
+        // Get candles from service
+        auto candles = price_agg_service_->get_candles(card_id, timeframe, limit);
+        
+        // Build JSON response
+        nlohmann::json candles_json = nlohmann::json::array();
+        for (const auto& candle : candles) {
+            auto timestamp_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                candle.timestamp.time_since_epoch()
+            ).count();
+            
+            candles_json.push_back({
+                {"timestamp", timestamp_seconds},
+                {"open", candle.open_price},
+                {"high", candle.high_price},
+                {"low", candle.low_price},
+                {"close", candle.close_price},
+                {"volume", candle.volume},
+                {"trade_count", candle.trade_count}
+            });
+        }
+        
+        nlohmann::json response_data = {
+            {"card_id", card_id},
+            {"timeframe", timeframe_str},
+            {"candles", candles_json}
+        };
+        
+        send_json(res, http::status::ok, response_data);
+        
+    } catch (const std::exception& e) {
+        send_error(res, http::status::internal_server_error, e.what());
+    }
+}
 
 } // namespace api
 } // namespace clash_trading

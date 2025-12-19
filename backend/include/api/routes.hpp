@@ -5,6 +5,7 @@
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
+#include "services/price_aggregation_service.hpp"
 #include "database/postgres_client.hpp"
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -21,6 +22,7 @@ private:
     std::shared_ptr<services::OrderService> order_service_;
     std::shared_ptr<services::TradeService> trade_service_;
     std::shared_ptr<services::UserService> user_service_;
+    std::shared_ptr<services::PriceAggregationService> price_agg_service_;
     
 public:
     APIRouter(std::shared_ptr<HTTPServer> server,
@@ -28,7 +30,9 @@ public:
              std::shared_ptr<database::PostgresClient> db,
              std::shared_ptr<services::OrderService> order_service,
              std::shared_ptr<services::TradeService> trade_service,
-             std::shared_ptr<services::UserService> user_service);
+             std::shared_ptr<services::UserService> user_service,
+             std::shared_ptr<services::PriceAggregationService> price_agg_service);
+             
     
     // Register all routes
     void register_routes();
@@ -59,7 +63,9 @@ private:
     // Card Routes
     void handle_get_all_cards(const http_request& req, http_response& res);
     void handle_get_card_details(const http_request& req, http_response& res);
-    
+
+    // Price/Candle Routes
+    void handle_get_candles(const http_request& req, http_response& res);
     
     // Extract user ID from JWT token in Authorization header
     std::optional<std::string> get_user_from_auth(const http_request& req);
