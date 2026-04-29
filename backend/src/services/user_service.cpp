@@ -8,11 +8,14 @@ UserService::UserService(std::shared_ptr<database::PostgresClient> db)
     : db_(db) {}
 
 std::optional<User> UserService::get_user(const std::string& user_id) const {
-    std::string query = 
-        "SELECT user_id, username, email, gold_balance, trader_level, total_trades "
-        "FROM users WHERE user_id = '" + user_id + "'";
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query instead of string concatenation
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT user_id, username, email, gold_balance, trader_level, total_trades "
+            "FROM users WHERE user_id = $1",
+            user_id
+        );
+    });
     
     if (result.empty()) {
         return std::nullopt;
@@ -25,11 +28,13 @@ Portfolio UserService::get_portfolio(const std::string& user_id) const {
     Portfolio portfolio;
     portfolio.user_id = user_id;
     
-    // Get user's gold balance
-    std::string balance_query = 
-        "SELECT gold_balance FROM users WHERE user_id = '" + user_id + "'";
-    
-    pqxx::result balance_result = db_->execute(balance_query);
+    // Using parameterized query for balance
+    auto balance_result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT gold_balance FROM users WHERE user_id = $1",
+            user_id
+        );
+    });
     
     if (balance_result.empty()) {
         // User not found, return empty portfolio
@@ -38,15 +43,17 @@ Portfolio UserService::get_portfolio(const std::string& user_id) const {
     
     portfolio.gold_balance = balance_result[0][0].as<int64_t>();
     
-    // Get all card holdings with current market prices
-    std::string holdings_query = 
-        "SELECT ui.card_id, c.name, ui.quantity, ui.avg_purchase_price, "
-        "c.current_market_price "
-        "FROM user_inventory ui "
-        "JOIN cards c ON ui.card_id = c.card_id "
-        "WHERE ui.user_id = '" + user_id + "' AND ui.quantity > 0";
-    
-    pqxx::result holdings_result = db_->execute(holdings_query);
+    // Using parameterized query for holdings
+    auto holdings_result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT ui.card_id, c.name, ui.quantity, ui.avg_purchase_price, "
+            "c.current_market_price "
+            "FROM user_inventory ui "
+            "JOIN cards c ON ui.card_id = c.card_id "
+            "WHERE ui.user_id = $1 AND ui.quantity > 0",
+            user_id
+        );
+    });
     
     // Build holdings and calculate values
     for (const auto& row : holdings_result) {
@@ -86,11 +93,13 @@ Portfolio UserService::get_portfolio(const std::string& user_id) const {
 TradingStats UserService::get_trading_stats(const std::string& user_id) const {
     TradingStats stats;
     
-    // Get basic stats from users table
-    std::string user_query = 
-        "SELECT trader_level, total_trades FROM users WHERE user_id = '" + user_id + "'";
-    
-    pqxx::result user_result = db_->execute(user_query);
+    // Using parameterized query for user stats
+    auto user_result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT trader_level, total_trades FROM users WHERE user_id = $1",
+            user_id
+        );
+    });
     
     if (user_result.empty()) {
         return stats; // User not found
@@ -99,17 +108,19 @@ TradingStats UserService::get_trading_stats(const std::string& user_id) const {
     stats.trader_level = user_result[0]["trader_level"].as<std::string>();
     stats.total_trades = user_result[0]["total_trades"].as<int>();
     
-    // Get detailed trading statistics from trades table
-    std::string trades_query = 
-        "SELECT "
-        "  COUNT(*) as total_count, "
-        "  COALESCE(SUM(total_value), 0) as total_vol, "
-        "  COALESCE(SUM(CASE WHEN buyer_id = '" + user_id + "' THEN 1 ELSE 0 END), 0) as buys, "
-        "  COALESCE(SUM(CASE WHEN seller_id = '" + user_id + "' THEN 1 ELSE 0 END), 0) as sells "
-        "FROM trades "
-        "WHERE buyer_id = '" + user_id + "' OR seller_id = '" + user_id + "'";
-    
-    pqxx::result trades_result = db_->execute(trades_query);
+    // Using parameterized query for trades stats
+    auto trades_result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT "
+            "  COUNT(*) as total_count, "
+            "  COALESCE(SUM(total_value), 0) as total_vol, "
+            "  COALESCE(SUM(CASE WHEN buyer_id = $1 THEN 1 ELSE 0 END), 0) as buys, "
+            "  COALESCE(SUM(CASE WHEN seller_id = $1 THEN 1 ELSE 0 END), 0) as sells "
+            "FROM trades "
+            "WHERE buyer_id = $1 OR seller_id = $1",
+            user_id
+        );
+    });
     
     if (!trades_result.empty()) {
         const auto& row = trades_result[0];
@@ -138,7 +149,7 @@ std::string UserService::calculate_trader_level(int total_trades) {
     } else if (total_trades >= 101) {
         return "MASTER";
     } else {
-        return "CHALLENGER";  // Starting rank
+        return "CHALLENGER";
     }
 }
 

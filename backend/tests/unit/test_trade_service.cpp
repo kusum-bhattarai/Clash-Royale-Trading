@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "services/trade_service.hpp"
 #include "database/postgres_client.hpp"
+#include "services/price_aggregation_service.hpp"
 #include "core/order_book.hpp"
 #include <memory>
 
@@ -9,6 +10,7 @@ using namespace clash_trading;
 class TradeServiceTest : public ::testing::Test {
 protected:
     std::shared_ptr<database::PostgresClient> db;
+    std::shared_ptr<services::PriceAggregationService> price_agg_service;
     std::unique_ptr<services::TradeService> trade_service;
     
     void SetUp() override {
@@ -25,7 +27,8 @@ protected:
                 return;
             }
             
-            trade_service = std::make_unique<services::TradeService>(db);
+            price_agg_service = std::make_shared<services::PriceAggregationService>(db);
+            trade_service = std::make_unique<services::TradeService>(db, price_agg_service);
             
             // Clean up test data
             db->execute("DELETE FROM trades WHERE trade_id LIKE 'test-%'");

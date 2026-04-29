@@ -13,7 +13,7 @@ project(ClashRoyaleTrading
 )
 
 # C++20 standard
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -55,6 +55,7 @@ add_executable(clash_trading
     src/services/trade_service.cpp
     src/services/user_service.cpp
     src/services/card_sync_service.cpp
+    src/services/price_aggregation_service.cpp
     src/api/auth.cpp
     src/api/http_server.cpp
     src/api/routes.cpp
@@ -79,6 +80,7 @@ target_link_libraries(clash_trading PRIVATE
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
 enable_testing()
 add_subdirectory(tests)
+add_subdirectory(benchmarks)
 
 # Print configuration summary
 message(STATUS "=== Clash Royale Trading Platform ===")

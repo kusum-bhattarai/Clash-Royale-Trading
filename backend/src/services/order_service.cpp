@@ -134,11 +134,13 @@ bool OrderService::cancel_order(const std::string& order_id, const std::string& 
 }
 
 std::vector<core::Order> OrderService::get_user_orders(const std::string& user_id) const {
-    std::string query = 
-        "SELECT * FROM orders WHERE user_id = '" + user_id + "' "
-        "ORDER BY created_at DESC";
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC",
+            user_id
+        );
+    });
     
     std::vector<core::Order> orders;
     orders.reserve(result.size());
@@ -151,10 +153,13 @@ std::vector<core::Order> OrderService::get_user_orders(const std::string& user_i
 }
 
 std::optional<core::Order> OrderService::get_order(const std::string& order_id) const {
-    std::string query = 
-        "SELECT * FROM orders WHERE order_id = '" + order_id + "'";
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT * FROM orders WHERE order_id = $1",
+            order_id
+        );
+    });
     
     if (result.empty()) {
         return std::nullopt;
@@ -254,12 +259,13 @@ int64_t OrderService::calculate_required_gold(const PlaceOrderRequest& request) 
         // For limit orders, we know the exact price
         return static_cast<int64_t>(request.price * request.quantity);
     } else {
-        // For market orders, estimate using current market price
-        std::string query = 
-            "SELECT current_market_price FROM cards WHERE card_id = '" + 
-            request.card_id + "'";
-        
-        pqxx::result result = db_->execute(query);
+        // Using parameterized query for market orders
+        auto result = db_->with_transaction([&](pqxx::work& txn) {
+            return txn.exec_params(
+                "SELECT current_market_price FROM cards WHERE card_id = $1",
+                request.card_id
+            );
+        });
         
         if (result.empty() || result[0][0].is_null()) {
             // No market price available, require a conservative amount
@@ -273,36 +279,42 @@ int64_t OrderService::calculate_required_gold(const PlaceOrderRequest& request) 
 }
 
 void OrderService::insert_order(const core::Order& order) {
-    std::ostringstream query;
-    query << "INSERT INTO orders "
-          << "(order_id, user_id, card_id, order_type, order_mode, price, "
-          << "quantity, filled_quantity, status, created_at, updated_at) "
-          << "VALUES ("
-          << "'" << order.order_id << "', "
-          << "'" << order.user_id << "', "
-          << "'" << order.card_id << "', "
-          << "'" << core::order_type_to_string(order.type) << "', "
-          << "'" << core::order_mode_to_string(order.mode) << "', "
-          << order.price << ", "
-          << order.quantity << ", "
-          << order.filled_quantity << ", "
-          << "'" << core::order_status_to_string(order.status) << "', "
-          << "NOW(), NOW())";
-    
-    db_->execute(query.str());
+    // Using parameterized query
+    db_->with_transaction([&](pqxx::work& txn) {
+        txn.exec_params(
+            "INSERT INTO orders "
+            "(order_id, user_id, card_id, order_type, order_mode, price, "
+            "quantity, filled_quantity, status, created_at, updated_at) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())",
+            order.order_id,
+            order.user_id,
+            order.card_id,
+            core::order_type_to_string(order.type),
+            core::order_mode_to_string(order.mode),
+            order.price,
+            order.quantity,
+            order.filled_quantity,
+            core::order_status_to_string(order.status)
+        );
+    });
 }
 
 void OrderService::update_order_status(const std::string& order_id, 
                                        core::OrderStatus status,
                                        int filled_quantity) {
-    std::ostringstream query;
-    query << "UPDATE orders SET "
-          << "status = '" << core::order_status_to_string(status) << "', "
-          << "filled_quantity = " << filled_quantity << ", "
-          << "updated_at = NOW() "
-          << "WHERE order_id = '" << order_id << "'";
-    
-    db_->execute(query.str());
+    // Using parameterized query
+    db_->with_transaction([&](pqxx::work& txn) {
+        txn.exec_params(
+            "UPDATE orders SET "
+            "status = $1, "
+            "filled_quantity = $2, "
+            "updated_at = NOW() "
+            "WHERE order_id = $3",
+            core::order_status_to_string(status),
+            filled_quantity,
+            order_id
+        );
+    });
 }
 
 core::Order OrderService::parse_order_from_row(const pqxx::row& row) const {

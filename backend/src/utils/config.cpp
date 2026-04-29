@@ -96,13 +96,13 @@ bool Config::get_bool(const std::string& key, bool default_value) const {
 }
 
 Config::DatabaseConfig Config::postgres_config() const {
-    return DatabaseConfig{
-        .host = get("POSTGRES_HOST", "localhost"),
-        .port = get_int("POSTGRES_PORT", 5432),
-        .database = get("POSTGRES_DB", "clash_trading"),
-        .user = get("POSTGRES_USER", "clash_user"),
-        .password = get("POSTGRES_PASSWORD", "")
-    };
+    DatabaseConfig cfg;
+    cfg.host     = get("POSTGRES_HOST", "localhost");
+    cfg.port     = get_int("POSTGRES_PORT", 5432);
+    cfg.database = get("POSTGRES_DB", "clash_trading");
+    cfg.user     = get("POSTGRES_USER", "clash_user");
+    cfg.password = get("POSTGRES_PASSWORD", "");
+    return cfg;
 }
 
 std::string Config::DatabaseConfig::connection_string() const {
@@ -116,20 +116,20 @@ std::string Config::DatabaseConfig::connection_string() const {
 }
 
 Config::RedisConfig Config::redis_config() const {
-    return RedisConfig{
-        .host = get("REDIS_HOST", "localhost"),
-        .port = get_int("REDIS_PORT", 6379),
-        .password = get("REDIS_PASSWORD", "")
-    };
+    RedisConfig cfg;
+    cfg.host     = get("REDIS_HOST", "localhost");
+    cfg.port     = get_int("REDIS_PORT", 6379);
+    cfg.password = get("REDIS_PASSWORD", "");
+    return cfg;
 }
 
 Config::ClashRoyaleAPIConfig Config::clash_royale_api_config() const {
-    return ClashRoyaleAPIConfig{
-        .base_url = get("CLASH_ROYALE_API_BASE_URL", "https://api.clashroyale.com/v1"),
-        .api_key = get("CLASH_ROYALE_API_KEY", ""),
-        .rate_limit_per_second = get_int("CLASH_ROYALE_RATE_LIMIT", 8),
-        .timeout_seconds = get_int("CLASH_ROYALE_TIMEOUT", 10)
-    };
+    ClashRoyaleAPIConfig cfg;
+    cfg.base_url             = get("CLASH_ROYALE_API_BASE_URL", "https://api.clashroyale.com/v1");
+    cfg.api_key              = get("CLASH_ROYALE_API_KEY", "");
+    cfg.rate_limit_per_second = get_int("CLASH_ROYALE_RATE_LIMIT", 8);
+    cfg.timeout_seconds      = get_int("CLASH_ROYALE_TIMEOUT", 10);
+    return cfg;
 }
 
 } // namespace clash

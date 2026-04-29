@@ -4,8 +4,12 @@
 namespace clash_trading {
 namespace services {
 
-TradeService::TradeService(std::shared_ptr<database::PostgresClient> db) 
-    : db_(db) {}
+TradeService::TradeService(
+    std::shared_ptr<database::PostgresClient> db,
+    std::shared_ptr<PriceAggregationService> price_agg_service
+) 
+    : db_(db)
+    , price_agg_service_(price_agg_service) {}
 
 void TradeService::execute_trade(const core::Trade& trade) {
     try {
@@ -31,6 +35,15 @@ void TradeService::execute_trade(const core::Trade& trade) {
         // Emit event for WebSocket broadcasting
         if (on_trade_executed_) {
             on_trade_executed_(trade);
+        }
+
+        if (price_agg_service_) {
+            price_agg_service_->on_trade(
+                trade.card_id,
+                trade.price,
+                trade.quantity,
+                std::chrono::system_clock::now()
+            );
         }
         
     } catch (const std::exception& e) {
@@ -62,6 +75,17 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
             }
         }
 
+        if (price_agg_service_) {
+            for (const auto& trade : trades) {
+                price_agg_service_->on_trade(
+                    trade.card_id,
+                    trade.price,
+                    trade.quantity,
+                    std::chrono::system_clock::now()
+                );
+            }
+        }
+
     } catch (const std::exception& e) {
         throw TradeExecutionException(
             "Failed to execute batch of " + std::to_string(trades.size()) + 
@@ -73,11 +97,11 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
 void TradeService::update_balance(pqxx::work& txn, 
                                   const std::string& user_id, 
                                   int64_t delta) {
-    // First, check current balance
-    std::string check_query = 
-        "SELECT gold_balance FROM users WHERE user_id = " + txn.quote(user_id);
-    
-    pqxx::result result = txn.exec(check_query);
+    // Using parameterized query to check current balance
+    pqxx::result result = txn.exec_params(
+        "SELECT gold_balance FROM users WHERE user_id = $1",
+        user_id
+    );
     
     if (result.empty()) {
         throw TradeExecutionException("User not found: " + user_id);
@@ -94,13 +118,12 @@ void TradeService::update_balance(pqxx::work& txn,
         );
     }
     
-    // Update balance
-    std::string update_query = 
-        "UPDATE users SET gold_balance = gold_balance + " + 
-        std::to_string(delta) + 
-        " WHERE user_id = " + txn.quote(user_id);
-    
-    txn.exec(update_query);
+    // Using parameterized query to update balance
+    txn.exec_params(
+        "UPDATE users SET gold_balance = gold_balance + $1 WHERE user_id = $2",
+        delta,
+        user_id
+    );
 }
 
 void TradeService::transfer_cards(pqxx::work& txn,
@@ -108,12 +131,12 @@ void TradeService::transfer_cards(pqxx::work& txn,
                                   const std::string& to_user_id,
                                   const std::string& card_id,
                                   int quantity) {
-    // Check seller has enough cards
-    std::string check_query = 
-        "SELECT quantity FROM user_inventory WHERE user_id = " + 
-        txn.quote(from_user_id) + " AND card_id = " + txn.quote(card_id);
-    
-    pqxx::result result = txn.exec(check_query);
+    // Using parameterized query to check seller's inventory
+    pqxx::result result = txn.exec_params(
+        "SELECT quantity FROM user_inventory WHERE user_id = $1 AND card_id = $2",
+        from_user_id,
+        card_id
+    );
     
     if (result.empty()) {
         throw TradeExecutionException(
@@ -130,55 +153,59 @@ void TradeService::transfer_cards(pqxx::work& txn,
             ", needs: " + std::to_string(quantity) + ")"
         );
     }
-    
-    // Deduct from seller
-    std::string deduct_query = 
-        "UPDATE user_inventory SET quantity = quantity - " + 
-        std::to_string(quantity) + 
-        " WHERE user_id = " + txn.quote(from_user_id) + 
-        " AND card_id = " + txn.quote(card_id);
-    txn.exec(deduct_query);
-    
-    // Add to buyer (insert or update using PostgreSQL UPSERT)
-    std::string upsert_query = 
-        "INSERT INTO user_inventory (user_id, card_id, quantity) VALUES (" +
-        txn.quote(to_user_id) + ", " +
-        txn.quote(card_id) + ", " +
-        std::to_string(quantity) + 
-        ") ON CONFLICT (user_id, card_id) " +
-        "DO UPDATE SET quantity = user_inventory.quantity + " + 
-        std::to_string(quantity);
-    txn.exec(upsert_query);
+
+    // Using parameterized query to deduct from seller
+    txn.exec_params(
+        "UPDATE user_inventory SET quantity = quantity - $1 "
+        "WHERE user_id = $2 AND card_id = $3",
+        quantity,
+        from_user_id,
+        card_id
+    );
+
+    // Using parameterized query for upsert to buyer
+    txn.exec_params(
+        "INSERT INTO user_inventory (user_id, card_id, quantity) "
+        "VALUES ($1, $2, $3) "
+        "ON CONFLICT (user_id, card_id) "
+        "DO UPDATE SET quantity = user_inventory.quantity + $3",
+        to_user_id,
+        card_id,
+        quantity
+    );
 }
 
 void TradeService::record_trade(pqxx::work& txn, const core::Trade& trade) {
-    std::string query = 
+    // Using parameterized query to record trade
+    txn.exec_params(
         "INSERT INTO trades "
         "(trade_id, card_id, buyer_id, seller_id, price, quantity, "
         "total_value, buyer_order_id, seller_order_id, merkle_hash, executed_at) "
-        "VALUES (" +
-        txn.quote(trade.trade_id) + ", " +
-        txn.quote(trade.card_id) + ", " +
-        txn.quote(trade.buyer_id) + ", " +
-        txn.quote(trade.seller_id) + ", " +
-        std::to_string(trade.price) + ", " +
-        std::to_string(trade.quantity) + ", " +
-        std::to_string(trade.total_value) + ", " +
-        txn.quote(trade.buyer_order_id) + ", " +
-        txn.quote(trade.seller_order_id) + ", " +
-        txn.quote(trade.merkle_hash) + ", " +
-        "NOW())";
-    
-    txn.exec(query);
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())",
+        trade.trade_id,
+        trade.card_id,
+        trade.buyer_id,
+        trade.seller_id,
+        trade.price,
+        trade.quantity,
+        trade.total_value,
+        trade.buyer_order_id,
+        trade.seller_order_id,
+        trade.merkle_hash
+    );
 }
 
 std::vector<core::Trade> TradeService::get_card_trades(const std::string& card_id,
                                                        int limit) const {
-    std::string query = 
-        "SELECT * FROM trades WHERE card_id = " + db_->execute("SELECT " + card_id)[0][0].as<std::string>() +
-        " ORDER BY executed_at DESC LIMIT " + std::to_string(limit);
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT * FROM trades WHERE card_id = $1 "
+            "ORDER BY executed_at DESC LIMIT $2",
+            card_id,
+            limit
+        );
+    });
     
     std::vector<core::Trade> trades;
     trades.reserve(result.size());
@@ -192,13 +219,15 @@ std::vector<core::Trade> TradeService::get_card_trades(const std::string& card_i
 
 std::vector<core::Trade> TradeService::get_user_trades(const std::string& user_id,
                                                        int limit) const {
-    // Use parameterized query to prevent SQL injection
-    std::string query = 
-        "SELECT * FROM trades WHERE buyer_id = '" + user_id + "' " +
-        "OR seller_id = '" + user_id + "' " +
-        "ORDER BY executed_at DESC LIMIT " + std::to_string(limit);
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT * FROM trades WHERE buyer_id = $1 OR seller_id = $1 "
+            "ORDER BY executed_at DESC LIMIT $2",
+            user_id,
+            limit
+        );
+    });
     
     std::vector<core::Trade> trades;
     trades.reserve(result.size());
@@ -211,10 +240,13 @@ std::vector<core::Trade> TradeService::get_user_trades(const std::string& user_i
 }
 
 std::optional<core::Trade> TradeService::get_trade(const std::string& trade_id) const {
-    std::string query = 
-        "SELECT * FROM trades WHERE trade_id = '" + trade_id + "'";
-    
-    pqxx::result result = db_->execute(query);
+    // Using parameterized query
+    auto result = db_->with_transaction([&](pqxx::work& txn) {
+        return txn.exec_params(
+            "SELECT * FROM trades WHERE trade_id = $1",
+            trade_id
+        );
+    });
     
     if (result.empty()) {
         return std::nullopt;

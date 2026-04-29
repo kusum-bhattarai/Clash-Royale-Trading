@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, usersAPI } from '../services/api';
 import type { User, LoginRequest, RegisterRequest } from '../types/api';
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 // Create the context with undefined default (we'll provide it via Provider)
@@ -99,6 +100,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('user');
   };
 
+  const refreshUser = async () => {
+    if (!user) return;
+    
+    try {
+      const portfolio = await usersAPI.getPortfolio(user.user_id);
+      const updatedUser = {
+        ...user,
+        gold_balance: portfolio.gold_balance
+      };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
+
   const isAuthenticated = !!user && !!token;
 
   // Provide the context value to children components
@@ -110,6 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

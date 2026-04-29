@@ -10,6 +10,7 @@
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
 #include "services/card_sync_service.hpp"
+#include "services/price_aggregation_service.hpp"
 #include "api/auth.hpp"
 #include "api/http_server.hpp"
 #include "api/routes.hpp"
@@ -17,6 +18,8 @@
 
 #include "api/websocket.hpp"
 #include "api/event_broadcaster.hpp"
+
+#include "core/candle.hpp"
 
 using namespace clash_trading;
 namespace net = boost::asio; 
@@ -68,8 +71,11 @@ int main(int argc, char* argv[]) {
         
         // Initialize services
         fmt::print("Initializing services...\n");
+
+        auto price_agg_service = std::make_shared<services::PriceAggregationService>(db);
+        fmt::print("  PriceAggregationService ready\n");
         
-        auto trade_service = std::make_shared<services::TradeService>(db);
+        auto trade_service = std::make_shared<services::TradeService>(db, price_agg_service);
         fmt::print("  TradeService ready\n");
         
         auto user_service = std::make_shared<services::UserService>(db);
@@ -126,7 +132,8 @@ int main(int argc, char* argv[]) {
             db,
             order_service,
             trade_service,
-            user_service
+            user_service,
+            price_agg_service
         );
         
         router.register_routes();

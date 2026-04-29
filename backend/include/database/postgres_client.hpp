@@ -4,6 +4,9 @@
 #include <memory>
 #include <string>
 #include <optional>
+#include "core/candle.hpp"
+#include <vector>
+#include <chrono>
 
 namespace clash_trading {
 namespace database {
@@ -28,6 +31,25 @@ public:
     // Transaction support
     template<typename Func>
     auto with_transaction(Func&& func) -> decltype(func(std::declval<pqxx::work&>()));
+
+    // Candle/Price History methods
+    void insert_candle(const trading::Candle& candle);
+    void insert_candles_batch(const std::vector<trading::Candle>& candles);
+    std::vector<trading::Candle> get_candles(
+        const std::string& card_id,
+        trading::Timeframe timeframe,
+        int limit = 500
+    );
+    std::vector<trading::Candle> get_candles_range(
+        const std::string& card_id,
+        trading::Timeframe timeframe,
+        std::chrono::system_clock::time_point start,
+        std::chrono::system_clock::time_point end
+    );
+    std::optional<trading::Candle> get_latest_candle(
+        const std::string& card_id,
+        trading::Timeframe timeframe
+    );
 };
 
 template<typename Func>

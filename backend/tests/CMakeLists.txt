@@ -14,7 +14,7 @@ add_executable(test_order_book
 target_link_libraries(test_order_book PRIVATE 
     GTest::gtest 
     GTest::gtest_main
-    OpenSSL::Crypto  # ADD THIS - needed for SHA256 in Trade
+    OpenSSL::Crypto  
 )
 target_include_directories(test_order_book PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME OrderBookTests COMMAND test_order_book)
@@ -36,6 +36,7 @@ add_test(NAME PostgresTests COMMAND test_postgres)
 add_executable(test_trade_service
     unit/test_trade_service.cpp
     ${CMAKE_SOURCE_DIR}/src/services/trade_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/price_aggregation_service.cpp
     ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
     ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
 )
@@ -67,6 +68,7 @@ add_executable(test_order_service
     unit/test_order_service.cpp
     ${CMAKE_SOURCE_DIR}/src/services/order_service.cpp
     ${CMAKE_SOURCE_DIR}/src/services/trade_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/price_aggregation_service.cpp
     ${CMAKE_SOURCE_DIR}/src/services/user_service.cpp
     ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
     ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp

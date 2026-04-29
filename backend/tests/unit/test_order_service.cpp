@@ -2,6 +2,7 @@
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
+#include "services/price_aggregation_service.hpp"
 #include "database/postgres_client.hpp"
 #include <memory>
 
@@ -28,7 +29,8 @@ protected:
             }
             
             // Create services
-            trade_service = std::make_shared<services::TradeService>(db);
+            auto price_agg_service = std::make_shared<services::PriceAggregationService>(db);
+            trade_service = std::make_shared<services::TradeService>(db, price_agg_service);
             user_service = std::make_shared<services::UserService>(db);
             order_service = std::make_unique<services::OrderService>(
                 db, trade_service, user_service
