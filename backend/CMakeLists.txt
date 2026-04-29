@@ -80,6 +80,7 @@ target_link_libraries(clash_trading PRIVATE
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
 enable_testing()
 add_subdirectory(tests)
+add_subdirectory(benchmarks)
 
 # Print configuration summary
 message(STATUS "=== Clash Royale Trading Platform ===")
