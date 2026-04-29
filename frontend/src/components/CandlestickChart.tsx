@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart} from 'lightweight-charts';
 
 interface CandlestickChartProps {
   cardId: string;
@@ -35,7 +35,7 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
       width: chartContainerRef.current.clientWidth,
       height: 400,
       layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
+        background: { color: 'transparent' },
         textColor: '#9ca3af',
       },
       grid: {
@@ -57,7 +57,7 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
 
     chartRef.current = chart;
 
-    const candlestickSeries = (chart as any).addCandlestickSeries({
+    const candlestickSeries = chart.addCandlestickSeries({
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderVisible: false,
@@ -67,7 +67,7 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
 
     candlestickSeriesRef.current = candlestickSeries;
 
-    const volumeSeries = (chart as any).addHistogramSeries({
+    const volumeSeries = chart.addHistogramSeries({
       color: '#64748b',
       priceFormat: {
         type: 'volume',
