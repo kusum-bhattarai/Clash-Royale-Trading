@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { cardsAPI, ordersAPI } from '../services/api';
 import type { Card, OrderBookSnapshot, OrderType, OrderMode } from '../types/api';
 import { useWebSocket } from '../contexts/WebSocketContext';
+import AnalyticsStrip from '../components/AnalyticsStrip';
 import CandlestickChart from '../components/CandlestickChart';
 
 export default function Trading() {
@@ -371,10 +372,14 @@ export default function Trading() {
             )}
 
             {selectedCard && (
-              <CandlestickChart 
-                cardId={selectedCard.card_id} 
-                cardName={selectedCard.name} 
+              <CandlestickChart
+                cardId={selectedCard.card_id}
+                cardName={selectedCard.name}
               />
+            )}
+
+            {selectedCard && (
+              <AnalyticsStrip cardId={selectedCard.card_id} />
             )}
 
             {/* Order Form */}

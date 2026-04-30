@@ -136,6 +136,25 @@ export interface TradingStats {
   trader_level: string;
 }
 
+// Market microstructure analytics for a card
+export interface AnalyticsSnapshot {
+  spread: {
+    instantaneous: number;   // best_ask - best_bid
+    twas_1h: number;         // time-weighted avg spread proxy (candle H-L)
+    relative_pct: number;    // instantaneous / mid * 100
+  };
+  order_flow_imbalance: {
+    '1m': number;  // [-1, 1]: positive = buy pressure
+    '5m': number;
+  };
+  price_impact_bps: number;  // avg per-period price displacement in bps
+  volatility: {
+    '1m': number;  // stddev(log_returns) over 20 1m candles
+    '1h': number;  // stddev(log_returns) over 20 1h candles
+  };
+  vwap: number;  // session VWAP, resets at UTC midnight
+}
+
 // Base WebSocket message interface
 export interface WSMessage {
   type: string;

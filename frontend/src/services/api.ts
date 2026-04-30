@@ -1,5 +1,6 @@
 import apiClient from '../lib/axios';
 import type {
+  AnalyticsSnapshot,
   AuthResponse,
   LoginRequest,
   RegisterRequest,
@@ -53,6 +54,14 @@ export const cardsAPI = {
   // Get recent trades for a card
   getTrades: async (cardId: string): Promise<Trade[]> => {
     const response = await apiClient.get<Trade[]>(`/api/cards/${cardId}/trades`);
+    return response.data;
+  },
+
+  // Get market microstructure analytics for a card
+  getAnalytics: async (cardId: string): Promise<AnalyticsSnapshot> => {
+    const response = await apiClient.get<AnalyticsSnapshot>(
+      `/api/cards/${cardId}/analytics`
+    );
     return response.data;
   },
 };
