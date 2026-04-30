@@ -1,5 +1,7 @@
 # Clash Royale Trading Exchange
 
+![CI](https://github.com/kusum-bhattarai/Clash-Royale-Trading/actions/workflows/ci.yml/badge.svg)
+
 A real-time card trading platform modeled on financial exchanges. Players trade Clash Royale cards on a live order book with price-time priority matching, atomic settlement, and WebSocket-driven market data.
 
 Built with a C++ matching engine, PostgreSQL settlement layer, and a React/TypeScript frontend.
