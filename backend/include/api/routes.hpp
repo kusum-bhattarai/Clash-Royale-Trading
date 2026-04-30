@@ -2,6 +2,7 @@
 
 #include "api/http_server.hpp"
 #include "api/auth.hpp"
+#include "services/analytics_service.hpp"
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
@@ -23,7 +24,8 @@ private:
     std::shared_ptr<services::TradeService> trade_service_;
     std::shared_ptr<services::UserService> user_service_;
     std::shared_ptr<services::PriceAggregationService> price_agg_service_;
-    
+    std::shared_ptr<services::AnalyticsService> analytics_service_;
+
 public:
     APIRouter(std::shared_ptr<HTTPServer> server,
              std::shared_ptr<AuthService> auth_service,
@@ -31,7 +33,8 @@ public:
              std::shared_ptr<services::OrderService> order_service,
              std::shared_ptr<services::TradeService> trade_service,
              std::shared_ptr<services::UserService> user_service,
-             std::shared_ptr<services::PriceAggregationService> price_agg_service);
+             std::shared_ptr<services::PriceAggregationService> price_agg_service,
+             std::shared_ptr<services::AnalyticsService> analytics_service);
              
     
     // Register all routes
@@ -66,6 +69,9 @@ private:
 
     // Price/Candle Routes
     void handle_get_candles(const http_request& req, http_response& res);
+
+    // Analytics Routes
+    void handle_get_analytics(const http_request& req, http_response& res);
     
     // Extract user ID from JWT token in Authorization header
     std::optional<std::string> get_user_from_auth(const http_request& req);

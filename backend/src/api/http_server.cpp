@@ -175,7 +175,7 @@ std::string HTTPServer::get_route_key(http::verb method, const std::string& path
     }
     // Check for pattern matches (e.g., /users/{id})
     for (const auto& [route_key, handler] : routes_) {
-        if (!route_key.starts_with(method_str + " ")) continue;
+        if (route_key.rfind(method_str + " ", 0) != 0) continue;
         
         std::string route_pattern = route_key.substr(method_str.length() + 1);
         if (matches_pattern(clean_path, route_pattern)) {

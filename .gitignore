@@ -4,4 +4,3 @@ build/
 .env
 .vscode/
 .DS_Store
-backend/scripts/
