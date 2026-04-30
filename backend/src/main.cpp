@@ -10,6 +10,7 @@
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
 #include "services/card_sync_service.hpp"
+#include "services/analytics_service.hpp"
 #include "services/price_aggregation_service.hpp"
 #include "api/auth.hpp"
 #include "api/http_server.hpp"
@@ -89,7 +90,12 @@ int main(int argc, char* argv[]) {
         auto auth_service = std::make_shared<api::AuthService>(
             config.jwt_secret()
         );
-        fmt::print("  AuthService ready\n\n");
+        fmt::print("  AuthService ready\n");
+
+        auto analytics_service = std::make_shared<services::AnalyticsService>(
+            db, order_service, price_agg_service
+        );
+        fmt::print("  AnalyticsService ready\n\n");
 
         // Initialize Clash Royale API
         fmt::print("[INIT] Initializing Clash Royale integration\n");
@@ -133,7 +139,8 @@ int main(int argc, char* argv[]) {
             order_service,
             trade_service,
             user_service,
-            price_agg_service
+            price_agg_service,
+            analytics_service
         );
         
         router.register_routes();

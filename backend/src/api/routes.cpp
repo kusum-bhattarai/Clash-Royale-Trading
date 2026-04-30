@@ -12,14 +12,16 @@ APIRouter::APIRouter(std::shared_ptr<HTTPServer> server,
                      std::shared_ptr<services::OrderService> order_service,
                      std::shared_ptr<services::TradeService> trade_service,
                      std::shared_ptr<services::UserService> user_service,
-                     std::shared_ptr<services::PriceAggregationService> price_agg_service)
+                     std::shared_ptr<services::PriceAggregationService> price_agg_service,
+                     std::shared_ptr<services::AnalyticsService> analytics_service)
     : server_(server)
     , auth_service_(auth_service)
     , db_(db)
     , order_service_(order_service)
     , trade_service_(trade_service)
     , user_service_(user_service)
-    , price_agg_service_(price_agg_service) {}
+    , price_agg_service_(price_agg_service)
+    , analytics_service_(analytics_service) {}
 
 void APIRouter::register_routes() {
     using namespace std::placeholders;
@@ -66,9 +68,13 @@ void APIRouter::register_routes() {
     server_->register_route(http::verb::get, "/api/cards/:cardId",
         std::bind(&APIRouter::handle_get_card_details, this, _1, _2));
 
-    // Price/Candle routes 
+    // Price/Candle routes
     server_->register_route(http::verb::get, "/api/cards/:cardId/candles",
         std::bind(&APIRouter::handle_get_candles, this, _1, _2));
+
+    // Analytics routes
+    server_->register_route(http::verb::get, "/api/cards/:cardId/analytics",
+        std::bind(&APIRouter::handle_get_analytics, this, _1, _2));
     
     fmt::print(" All routes registered!\n\n");
 }
@@ -771,6 +777,52 @@ void APIRouter::handle_get_candles(const http_request& req, http_response& res) 
         
         send_json(res, http::status::ok, response_data);
         
+    } catch (const std::exception& e) {
+        send_error(res, http::status::internal_server_error, e.what());
+    }
+}
+
+// Analytics Handler
+void APIRouter::handle_get_analytics(const http_request& req, http_response& res) {
+    try {
+        std::string path = std::string(req.target());
+        size_t query_pos = path.find('?');
+        std::string path_clean = (query_pos != std::string::npos)
+                                 ? path.substr(0, query_pos) : path;
+
+        size_t cards_pos     = path_clean.find("/cards/");
+        size_t analytics_pos = path_clean.find("/analytics");
+        if (cards_pos == std::string::npos || analytics_pos == std::string::npos) {
+            send_error(res, http::status::bad_request, "Invalid path");
+            return;
+        }
+        std::string card_id = path_clean.substr(
+            cards_pos + 7,
+            analytics_pos - (cards_pos + 7)
+        );
+
+        auto snap = analytics_service_->get_analytics(card_id);
+
+        nlohmann::json resp = {
+            {"spread", {
+                {"instantaneous", snap.spread.instantaneous},
+                {"twas_1h",       snap.spread.twas_1h},
+                {"relative_pct",  snap.spread.relative_pct}
+            }},
+            {"order_flow_imbalance", {
+                {"1m", snap.order_flow_imbalance.window_1m},
+                {"5m", snap.order_flow_imbalance.window_5m}
+            }},
+            {"price_impact_bps", snap.price_impact_bps},
+            {"volatility", {
+                {"1m", snap.volatility_1m},
+                {"1h", snap.volatility_1h}
+            }},
+            {"vwap", snap.vwap}
+        };
+
+        send_json(res, http::status::ok, resp);
+
     } catch (const std::exception& e) {
         send_error(res, http::status::internal_server_error, e.what());
     }

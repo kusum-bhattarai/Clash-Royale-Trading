@@ -24,6 +24,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
+# Sanitizer build types — use separate build dirs, never combine Tsan + Asan
+# cmake .. -DCMAKE_BUILD_TYPE=Tsan  →  ThreadSanitizer
+# cmake .. -DCMAKE_BUILD_TYPE=Asan  →  AddressSanitizer
+set(CMAKE_CXX_FLAGS_TSAN  "-fsanitize=thread  -g -O1" CACHE STRING "Flags for ThreadSanitizer build")
+set(CMAKE_EXE_LINKER_FLAGS_TSAN  "-fsanitize=thread"  CACHE STRING "Linker flags for ThreadSanitizer build")
+set(CMAKE_CXX_FLAGS_ASAN  "-fsanitize=address -g -O1" CACHE STRING "Flags for AddressSanitizer build")
+set(CMAKE_EXE_LINKER_FLAGS_ASAN  "-fsanitize=address" CACHE STRING "Linker flags for AddressSanitizer build")
+
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -54,6 +62,7 @@ add_executable(clash_trading
     src/services/order_service.cpp
     src/services/trade_service.cpp
     src/services/user_service.cpp
+    src/services/analytics_service.cpp
     src/services/card_sync_service.cpp
     src/services/price_aggregation_service.cpp
     src/api/auth.cpp
