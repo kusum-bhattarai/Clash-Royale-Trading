@@ -67,6 +67,7 @@ add_executable(clash_trading
     src/services/price_aggregation_service.cpp
     src/api/auth.cpp
     src/api/http_server.cpp
+    src/api/rate_limiter.cpp
     src/api/routes.cpp
     src/api/websocket.cpp
     src/external/clash_royale_api.cpp
