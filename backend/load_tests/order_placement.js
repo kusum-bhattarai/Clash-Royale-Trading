@@ -8,7 +8,7 @@
  *   k6 run --env TOKEN=<jwt> backend/load_tests/order_placement.js
  *
  * Get TOKEN via run_load_test.sh, or manually:
- *   TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+ *   TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
  *     -H 'Content-Type: application/json' \
  *     -d '{"username":"load_test_user","password":"load_test_pass"}' \
  *     | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
@@ -47,7 +47,7 @@ const TOKEN    = __ENV.TOKEN;
 // setup() runs once before VUs start — fetches real card_ids from the API
 // so the test doesn't hardcode IDs that may differ from what's in the DB.
 export function setup() {
-  const res = http.get(`${BASE_URL}/api/cards`, {
+  const res = http.get(`${BASE_URL}/api/v1/cards`, {
     headers: { 'Authorization': `Bearer ${TOKEN}` },
   });
 
@@ -59,13 +59,13 @@ export function setup() {
   try {
     cards = JSON.parse(res.body);
   } catch {
-    throw new Error(`Could not parse /api/cards response: ${res.body}`);
+    throw new Error(`Could not parse /api/v1/cards response: ${res.body}`);
   }
 
   // Expect either an array or { cards: [...] }
   const list = Array.isArray(cards) ? cards : (cards.cards || []);
   if (list.length === 0) {
-    throw new Error('No cards returned from /api/cards — seed the DB first');
+    throw new Error('No cards returned from /api/v1/cards — seed the DB first');
   }
 
   const cardIds = list.map((c) => c.card_id || c.id).filter(Boolean);
@@ -101,7 +101,7 @@ export default function (data) {
     'Authorization': `Bearer ${TOKEN}`,
   };
 
-  const res = http.post(`${BASE_URL}/api/orders`, payload, { headers, timeout: '5s' });
+  const res = http.post(`${BASE_URL}/api/v1/orders`, payload, { headers, timeout: '5s' });
 
   const isServerError = res.status >= 500;
   serverErrorRate.add(isServerError);

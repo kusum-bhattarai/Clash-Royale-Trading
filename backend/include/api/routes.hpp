@@ -1,7 +1,9 @@
 #pragma once
 
+#include "api/error_codes.hpp"
 #include "api/http_server.hpp"
 #include "api/auth.hpp"
+#include "api/rate_limiter.hpp"
 #include "services/analytics_service.hpp"
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
@@ -25,6 +27,7 @@ private:
     std::shared_ptr<services::UserService> user_service_;
     std::shared_ptr<services::PriceAggregationService> price_agg_service_;
     std::shared_ptr<services::AnalyticsService> analytics_service_;
+    RateLimiter rate_limiter_;  // 10 orders/sec per user_id, burst 10
 
 public:
     APIRouter(std::shared_ptr<HTTPServer> server,
@@ -81,9 +84,12 @@ private:
     
     // Send JSON response
     void send_json(http_response& res, http::status status, const nlohmann::json& data);
-    
-    // Send error response
-    void send_error(http_response& res, http::status status, const std::string& message);
+
+    // Send structured error: { "error": error_key, "message": message, "code": code }
+    void send_error(http_response& res, http::status status,
+                    const std::string& error_key,
+                    const std::string& message,
+                    int code);
 };
 
 } // namespace api
