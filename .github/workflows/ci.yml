@@ -25,45 +25,50 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/backend/vcpkg
+
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -qq
+          sudo apt-get update
           sudo apt-get install -y \
             cmake ninja-build \
             libssl-dev \
             libpq-dev \
+            libcurl4-openssl-dev \
             postgresql-client \
             curl zip unzip tar
 
-      - name: Bootstrap vcpkg
-        run: |
-          cd backend
-          git clone https://github.com/microsoft/vcpkg
-          ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-
-      - name: Cache vcpkg packages
+      - name: Cache vcpkg (binary + installed packages)
         uses: actions/cache@v4
         with:
-          path: backend/vcpkg_installed
+          path: |
+            backend/vcpkg
+            backend/vcpkg_installed
           key: vcpkg-${{ runner.os }}-${{ hashFiles('backend/vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
+      - name: Bootstrap vcpkg
+        run: |
+          if [ ! -f "$VCPKG_ROOT/vcpkg" ]; then
+            git clone https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+            "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+
       - name: Install vcpkg dependencies
         run: |
           cd backend
-          ./vcpkg/vcpkg install --triplet x64-linux
+          "$VCPKG_ROOT/vcpkg" install --triplet x64-linux
 
-      - name: Configure (Release)
+      - name: Configure
         run: |
           cmake -S backend -B backend/build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=backend/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -G Ninja
 
       - name: Build
