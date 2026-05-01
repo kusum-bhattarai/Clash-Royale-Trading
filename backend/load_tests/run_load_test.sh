@@ -29,13 +29,13 @@ fi
 
 # Ensure load_test_user exists
 echo "→ Registering load_test_user (ok if 409)..."
-curl -s -o /dev/null -X POST "$BASE_URL/api/auth/register" \
+curl -s -o /dev/null -X POST "$BASE_URL/api/v1/auth/register" \
   -H 'Content-Type: application/json' \
   -d '{"username":"load_test_user","password":"load_test_pass","email":"load@test.local","starting_gold":100000000}'
 
 # Obtain JWT
 echo "→ Logging in as load_test_user..."
-TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
   -d '{"username":"load_test_user","password":"load_test_pass"}' \
   | grep -o '"token":"[^"]*"' | cut -d'"' -f4)

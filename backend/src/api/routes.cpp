@@ -1,4 +1,5 @@
 #include "api/routes.hpp"
+#include "api/error_codes.hpp"
 #include "core/order.hpp"
 #include <uuid/uuid.h>
 #include <fmt/core.h>
@@ -29,51 +30,51 @@ void APIRouter::register_routes() {
     fmt::print("\n📋 Registering API routes...\n");
     
     // Authentication routes
-    server_->register_route(http::verb::post, "/api/auth/register",
+    server_->register_route(http::verb::post, "/api/v1/auth/register",
         std::bind(&APIRouter::handle_register, this, _1, _2));
-    server_->register_route(http::verb::post, "/api/auth/login",
+    server_->register_route(http::verb::post, "/api/v1/auth/login",
         std::bind(&APIRouter::handle_login, this, _1, _2));
-    
+
     // Order routes
-    server_->register_route(http::verb::post, "/api/orders",
+    server_->register_route(http::verb::post, "/api/v1/orders",
         std::bind(&APIRouter::handle_place_order, this, _1, _2));
-    server_->register_route(http::verb::delete_, "/api/orders/:orderId",
+    server_->register_route(http::verb::delete_, "/api/v1/orders/:orderId",
         std::bind(&APIRouter::handle_cancel_order, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/orders/:orderId",
+    server_->register_route(http::verb::get, "/api/v1/orders/:orderId",
         std::bind(&APIRouter::handle_get_order, this, _1, _2));
-    
+
     // User routes
-    server_->register_route(http::verb::get, "/api/users/:userId/orders",
+    server_->register_route(http::verb::get, "/api/v1/users/:userId/orders",
         std::bind(&APIRouter::handle_get_user_orders, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/users/:userId/portfolio",
+    server_->register_route(http::verb::get, "/api/v1/users/:userId/portfolio",
         std::bind(&APIRouter::handle_get_portfolio, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/users/:userId/stats",
+    server_->register_route(http::verb::get, "/api/v1/users/:userId/stats",
         std::bind(&APIRouter::handle_get_stats, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/users/:userId/trades",
+    server_->register_route(http::verb::get, "/api/v1/users/:userId/trades",
         std::bind(&APIRouter::handle_get_user_trades, this, _1, _2));
-    
+
     // Market data routes
-    server_->register_route(http::verb::get, "/api/cards/:cardId/orderbook",
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId/orderbook",
         std::bind(&APIRouter::handle_get_order_book, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/cards/:cardId/trades",
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId/trades",
         std::bind(&APIRouter::handle_get_card_trades, this, _1, _2));
-    
+
     // Trade routes
-    server_->register_route(http::verb::get, "/api/trades/:tradeId",
+    server_->register_route(http::verb::get, "/api/v1/trades/:tradeId",
         std::bind(&APIRouter::handle_get_trade, this, _1, _2));
 
     // Card routes
-    server_->register_route(http::verb::get, "/api/cards",
+    server_->register_route(http::verb::get, "/api/v1/cards",
         std::bind(&APIRouter::handle_get_all_cards, this, _1, _2));
-    server_->register_route(http::verb::get, "/api/cards/:cardId",
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId",
         std::bind(&APIRouter::handle_get_card_details, this, _1, _2));
 
     // Price/Candle routes
-    server_->register_route(http::verb::get, "/api/cards/:cardId/candles",
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId/candles",
         std::bind(&APIRouter::handle_get_candles, this, _1, _2));
 
     // Analytics routes
-    server_->register_route(http::verb::get, "/api/cards/:cardId/analytics",
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId/analytics",
         std::bind(&APIRouter::handle_get_analytics, this, _1, _2));
     
     fmt::print(" All routes registered!\n\n");
@@ -87,32 +88,35 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
         std::string username = body["username"];
         std::string email = body["email"];
         std::string password = body["password"];
-        
-        // Check required fields
+
         if (username.empty() || email.empty() || password.empty()) {
-            send_error(res, http::status::bad_request, "All fields are required");
+            send_error(res, http::status::bad_request,
+                       "MISSING_FIELDS", "username, email and password are required",
+                       error_codes::INVALID_REQUEST);
             return;
         }
-        
-        // Username validation
+
         if (username.length() < 3 || username.length() > 20) {
-            send_error(res, http::status::bad_request, "Username must be 3-20 characters");
+            send_error(res, http::status::bad_request,
+                       "INVALID_USERNAME", "Username must be 3-20 characters",
+                       error_codes::INVALID_REQUEST);
             return;
         }
-        
-        // Email validation (basic)
+
         if (email.find('@') == std::string::npos) {
-            send_error(res, http::status::bad_request, "Invalid email format");
+            send_error(res, http::status::bad_request,
+                       "INVALID_EMAIL", "Invalid email format",
+                       error_codes::INVALID_REQUEST);
             return;
         }
-        
-        // Password strength
+
         if (password.length() < 8) {
-            send_error(res, http::status::bad_request, "Password must be at least 8 characters");
+            send_error(res, http::status::bad_request,
+                       "INVALID_PASSWORD", "Password must be at least 8 characters",
+                       error_codes::INVALID_REQUEST);
             return;
         }
-        
-        // Check if username already exists (DATABASE CHECK)
+
         auto existing_user = db_->with_transaction([&](pqxx::work& txn) {
             return txn.exec_params(
                 "SELECT user_id FROM users WHERE username = $1 LIMIT 1",
@@ -120,11 +124,12 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
             );
         });
         if (!existing_user.empty()) {
-            send_error(res, http::status::conflict, "Username already taken");
+            send_error(res, http::status::conflict,
+                       "DUPLICATE_RESOURCE", "Username already taken",
+                       error_codes::DUPLICATE_RESOURCE);
             return;
         }
-        
-        // Check if email already exists
+
         auto existing_email = db_->with_transaction([&](pqxx::work& txn) {
             return txn.exec_params(
                 "SELECT user_id FROM users WHERE email = $1 LIMIT 1",
@@ -132,7 +137,9 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
             );
         });
         if (!existing_email.empty()) {
-            send_error(res, http::status::conflict, "Email already registered");
+            send_error(res, http::status::conflict,
+                       "DUPLICATE_RESOURCE", "Email already registered",
+                       error_codes::DUPLICATE_RESOURCE);
             return;
         }
         
@@ -171,7 +178,8 @@ void APIRouter::handle_register(const http_request& req, http_response& res) {
         send_json(res, http::status::created, response_data);
         
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -183,7 +191,9 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
         std::string password = body["password"];
         
         if (username.empty() || password.empty()) {
-            send_error(res, http::status::bad_request, "Missing username or password");
+            send_error(res, http::status::bad_request,
+                       "MISSING_FIELDS", "username and password are required",
+                       error_codes::INVALID_REQUEST);
             return;
         }
         
@@ -197,16 +207,19 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
         });
         
         if (result.empty()) {
-            send_error(res, http::status::unauthorized, "Invalid credentials");
+            send_error(res, http::status::unauthorized,
+                       "INVALID_CREDENTIALS", "Invalid credentials",
+                       error_codes::INVALID_CREDENTIALS);
             return;
         }
-        
+
         std::string user_id = result[0]["user_id"].as<std::string>();
         std::string stored_hash = result[0]["password_hash"].as<std::string>();
-        
-        // Verify password
+
         if (!auth_service_->verify_password(password, stored_hash)) {
-            send_error(res, http::status::unauthorized, "Invalid credentials");
+            send_error(res, http::status::unauthorized,
+                       "INVALID_CREDENTIALS", "Invalid credentials",
+                       error_codes::INVALID_CREDENTIALS);
             return;
         }
         
@@ -229,7 +242,8 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
         send_json(res, http::status::ok, response_data);
         
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -239,27 +253,94 @@ void APIRouter::handle_place_order(const http_request& req, http_response& res) 
         // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
-        
+
+        // Rate limit: 10 orders/sec per user, burst 10
+        if (!rate_limiter_.allow(*user_id_opt)) {
+            int64_t retry_ms = rate_limiter_.retry_after_ms(*user_id_opt);
+            res.set("Retry-After", std::to_string((retry_ms + 999) / 1000));
+            send_error(res, http::status::too_many_requests,
+                       "RATE_LIMIT_EXCEEDED", "Rate limit exceeded: max 10 orders/sec",
+                       error_codes::RATE_LIMIT_EXCEEDED);
+            return;
+        }
+
         auto body = nlohmann::json::parse(req.body());
-        
+
+        // Input validation
+        if (!body.contains("card_id") || !body.contains("type") ||
+            !body.contains("mode")    || !body.contains("quantity")) {
+            send_error(res, http::status::bad_request,
+                       "MISSING_FIELDS", "card_id, type, mode and quantity are required",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+
+        std::string card_id  = body["card_id"].get<std::string>();
+        std::string type_str = body["type"].get<std::string>();
+        std::string mode_str = body["mode"].get<std::string>();
+        int quantity         = body["quantity"].get<int>();
+
+        if (card_id.empty()) {
+            send_error(res, http::status::bad_request,
+                       "INVALID_ORDER", "card_id must not be empty",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+        if (type_str != "BUY" && type_str != "SELL") {
+            send_error(res, http::status::bad_request,
+                       "INVALID_ORDER", "type must be BUY or SELL",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+        if (mode_str != "MARKET" && mode_str != "LIMIT") {
+            send_error(res, http::status::bad_request,
+                       "INVALID_ORDER", "mode must be MARKET or LIMIT",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+        if (quantity <= 0) {
+            send_error(res, http::status::bad_request,
+                       "INVALID_ORDER", "quantity must be greater than 0",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+        if (quantity > 1000) {
+            send_error(res, http::status::bad_request,
+                       "INVALID_ORDER", "quantity cannot exceed 1000 per order",
+                       error_codes::INVALID_ORDER);
+            return;
+        }
+
+        double price = 0.0;
+        if (mode_str == "LIMIT") {
+            if (!body.contains("price")) {
+                send_error(res, http::status::bad_request,
+                           "INVALID_ORDER", "price is required for LIMIT orders",
+                           error_codes::INVALID_ORDER);
+                return;
+            }
+            price = body["price"].get<double>();
+            if (price <= 0.0) {
+                send_error(res, http::status::bad_request,
+                           "INVALID_ORDER", "price must be greater than 0",
+                           error_codes::INVALID_ORDER);
+                return;
+            }
+        }
+
         // Build order request
         services::PlaceOrderRequest order_req;
-        order_req.user_id = *user_id_opt;
-        order_req.card_id = body["card_id"];
-        order_req.quantity = body["quantity"];
-        
-        std::string type_str = body["type"];
-        order_req.type = (type_str == "BUY") ? core::OrderType::BUY : core::OrderType::SELL;
-        
-        std::string mode_str = body["mode"];
-        order_req.mode = (mode_str == "MARKET") ? core::OrderMode::MARKET : core::OrderMode::LIMIT;
-        
-        if (order_req.mode == core::OrderMode::LIMIT) {
-            order_req.price = body["price"];
-        }
+        order_req.user_id  = *user_id_opt;
+        order_req.card_id  = card_id;
+        order_req.quantity = quantity;
+        order_req.type     = (type_str == "BUY") ? core::OrderType::BUY : core::OrderType::SELL;
+        order_req.mode     = (mode_str == "MARKET") ? core::OrderMode::MARKET : core::OrderMode::LIMIT;
+        order_req.price    = price;
         
         // Place order
         auto response = order_service_->place_order(order_req);
@@ -284,46 +365,51 @@ void APIRouter::handle_place_order(const http_request& req, http_response& res) 
         send_json(res, http::status::ok, response_data);
         
     } catch (const services::OrderValidationException& e) {
-        send_error(res, http::status::bad_request, e.what());
+        send_error(res, http::status::bad_request,
+                   "INVALID_ORDER", e.what(), error_codes::INVALID_ORDER);
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 void APIRouter::handle_cancel_order(const http_request& req, http_response& res) {
     try {
-        // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
-        
-        // Extract order ID from path (simplified - just get last segment)
+
         std::string path = std::string(req.target());
         size_t last_slash = path.find_last_of('/');
         std::string order_id = path.substr(last_slash + 1);
-        
-        // Cancel order
+
         bool cancelled = order_service_->cancel_order(order_id, *user_id_opt);
-        
+
         if (cancelled) {
             send_json(res, http::status::ok, {{"success", true}});
         } else {
-            send_error(res, http::status::not_found, "Order not found or already cancelled");
+            send_error(res, http::status::not_found,
+                       "ORDER_NOT_FOUND", "Order not found or already cancelled",
+                       error_codes::RESOURCE_NOT_FOUND);
         }
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 void APIRouter::handle_get_user_orders(const http_request& req, http_response& res) {
     try {
-        // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
         
@@ -345,9 +431,10 @@ void APIRouter::handle_get_user_orders(const http_request& req, http_response& r
         }
         
         send_json(res, http::status::ok, {{"orders", orders_json}});
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -361,7 +448,9 @@ void APIRouter::handle_get_order(const http_request& req, http_response& res) {
         auto order_opt = order_service_->get_order(order_id);
         
         if (!order_opt) {
-            send_error(res, http::status::not_found, "Order not found");
+            send_error(res, http::status::not_found,
+                       "ORDER_NOT_FOUND", "Order not found",
+                       error_codes::RESOURCE_NOT_FOUND);
             return;
         }
         
@@ -379,19 +468,21 @@ void APIRouter::handle_get_order(const http_request& req, http_response& res) {
         };
         
         send_json(res, http::status::ok, order_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 // User Handlers
 void APIRouter::handle_get_portfolio(const http_request& req, http_response& res) {
     try {
-        // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
         
@@ -420,18 +511,20 @@ void APIRouter::handle_get_portfolio(const http_request& req, http_response& res
         };
         
         send_json(res, http::status::ok, portfolio_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 void APIRouter::handle_get_stats(const http_request& req, http_response& res) {
     try {
-        // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
         
@@ -446,13 +539,14 @@ void APIRouter::handle_get_stats(const http_request& req, http_response& res) {
         };
         
         send_json(res, http::status::ok, stats_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
-// Market dta handlers
+// Market data handlers
 void APIRouter::handle_get_order_book(const http_request& req, http_response& res) {
     try {
         // Extract card ID from path
@@ -480,68 +574,118 @@ void APIRouter::handle_get_order_book(const http_request& req, http_response& re
         };
         
         send_json(res, http::status::ok, orderbook_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 void APIRouter::handle_get_card_trades(const http_request& req, http_response& res) {
     try {
-        // Extract card ID from path
         std::string path = std::string(req.target());
-        size_t last_slash = path.find_last_of('/');
-        size_t second_last_slash = path.find_last_of('/', last_slash - 1);
-        std::string card_id = path.substr(second_last_slash + 1, last_slash - second_last_slash - 1);
-        
-        auto trades = trade_service_->get_card_trades(card_id, 50);
-        
+        size_t query_pos = path.find('?');
+        std::string path_clean = (query_pos != std::string::npos) ? path.substr(0, query_pos) : path;
+
+        size_t last_slash        = path_clean.find_last_of('/');
+        size_t second_last_slash = path_clean.find_last_of('/', last_slash - 1);
+        std::string card_id = path_clean.substr(second_last_slash + 1, last_slash - second_last_slash - 1);
+
+        int limit  = 50;
+        int offset = 0;
+        if (query_pos != std::string::npos) {
+            std::string qs = path.substr(query_pos + 1);
+            for (size_t pos = 0; pos < qs.size(); ) {
+                size_t eq  = qs.find('=', pos);
+                if (eq == std::string::npos) break;
+                size_t amp = qs.find('&', eq);
+                if (amp == std::string::npos) amp = qs.size();
+                std::string key = qs.substr(pos, eq - pos);
+                std::string val = qs.substr(eq + 1, amp - eq - 1);
+                if (key == "limit")  limit  = std::max(1, std::min(200, std::stoi(val)));
+                if (key == "offset") offset = std::max(0, std::stoi(val));
+                pos = amp + 1;
+            }
+        }
+
+        auto trades = trade_service_->get_card_trades(card_id, limit, offset);
+
         nlohmann::json trades_json = nlohmann::json::array();
         for (const auto& trade : trades) {
             trades_json.push_back({
-                {"trade_id", trade.trade_id},
-                {"price", trade.price},
-                {"quantity", trade.quantity},
+                {"trade_id",    trade.trade_id},
+                {"price",       trade.price},
+                {"quantity",    trade.quantity},
                 {"total_value", trade.total_value}
             });
         }
-        
-        send_json(res, http::status::ok, {{"trades", trades_json}});
-        
+
+        send_json(res, http::status::ok, {
+            {"trades",  trades_json},
+            {"limit",   limit},
+            {"offset",  offset}
+        });
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
 // Trade handlers
 void APIRouter::handle_get_user_trades(const http_request& req, http_response& res) {
     try {
-        // Authenticate
         auto user_id_opt = get_user_from_auth(req);
         if (!user_id_opt) {
-            send_error(res, http::status::unauthorized, "Invalid or missing token");
+            send_error(res, http::status::unauthorized,
+                       "UNAUTHORIZED", "Invalid or missing token",
+                       error_codes::UNAUTHORIZED);
             return;
         }
-        
-        auto trades = trade_service_->get_user_trades(*user_id_opt, 50);
-        
+
+        std::string path = std::string(req.target());
+        size_t query_pos = path.find('?');
+        int limit  = 50;
+        int offset = 0;
+        if (query_pos != std::string::npos) {
+            std::string qs = path.substr(query_pos + 1);
+            for (size_t pos = 0; pos < qs.size(); ) {
+                size_t eq  = qs.find('=', pos);
+                if (eq == std::string::npos) break;
+                size_t amp = qs.find('&', eq);
+                if (amp == std::string::npos) amp = qs.size();
+                std::string key = qs.substr(pos, eq - pos);
+                std::string val = qs.substr(eq + 1, amp - eq - 1);
+                if (key == "limit")  limit  = std::max(1, std::min(200, std::stoi(val)));
+                if (key == "offset") offset = std::max(0, std::stoi(val));
+                pos = amp + 1;
+            }
+        }
+
+        auto trades = trade_service_->get_user_trades(*user_id_opt, limit, offset);
+
         nlohmann::json trades_json = nlohmann::json::array();
         for (const auto& trade : trades) {
             trades_json.push_back({
-                {"trade_id", trade.trade_id},
-                {"card_id", trade.card_id},
-                {"price", trade.price},
-                {"quantity", trade.quantity},
+                {"trade_id",    trade.trade_id},
+                {"card_id",     trade.card_id},
+                {"price",       trade.price},
+                {"quantity",    trade.quantity},
                 {"total_value", trade.total_value},
-                {"buyer_id", trade.buyer_id},
-                {"seller_id", trade.seller_id}
+                {"buyer_id",    trade.buyer_id},
+                {"seller_id",   trade.seller_id}
             });
         }
-        
-        send_json(res, http::status::ok, {{"trades", trades_json}});
-        
+
+        send_json(res, http::status::ok, {
+            {"trades",  trades_json},
+            {"limit",   limit},
+            {"offset",  offset}
+        });
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -555,7 +699,9 @@ void APIRouter::handle_get_trade(const http_request& req, http_response& res) {
         auto trade_opt = trade_service_->get_trade(trade_id);
         
         if (!trade_opt) {
-            send_error(res, http::status::not_found, "Trade not found");
+            send_error(res, http::status::not_found,
+                       "TRADE_NOT_FOUND", "Trade not found",
+                       error_codes::RESOURCE_NOT_FOUND);
             return;
         }
         
@@ -572,9 +718,10 @@ void APIRouter::handle_get_trade(const http_request& req, http_response& res) {
         };
         
         send_json(res, http::status::ok, trade_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -607,10 +754,17 @@ void APIRouter::send_json(http_response& res, http::status status, const nlohman
     res.body() = data.dump();
 }
 
-void APIRouter::send_error(http_response& res, http::status status, const std::string& message) {
+void APIRouter::send_error(http_response& res, http::status status,
+                           const std::string& error_key,
+                           const std::string& message,
+                           int code) {
     res.result(status);
     res.set(http::field::content_type, "application/json");
-    res.body() = nlohmann::json{{"error", message}}.dump();
+    res.body() = nlohmann::json{
+        {"error",   error_key},
+        {"message", message},
+        {"code",    code}
+    }.dump();
 }
 
 // Card Handlers
@@ -649,7 +803,8 @@ void APIRouter::handle_get_all_cards(const http_request& req, http_response& res
         res.prepare_payload();
         
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -670,7 +825,9 @@ void APIRouter::handle_get_card_details(const http_request& req, http_response& 
         
         if (result.empty()) {
             txn.commit();
-            send_error(res, http::status::not_found, "Card not found");
+            send_error(res, http::status::not_found,
+                       "CARD_NOT_FOUND", "Card not found",
+                       error_codes::RESOURCE_NOT_FOUND);
             return;
         }
         
@@ -690,9 +847,10 @@ void APIRouter::handle_get_card_details(const http_request& req, http_response& 
         
         txn.commit();
         send_json(res, http::status::ok, card_json);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -776,9 +934,10 @@ void APIRouter::handle_get_candles(const http_request& req, http_response& res) 
         };
         
         send_json(res, http::status::ok, response_data);
-        
+
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 
@@ -793,7 +952,9 @@ void APIRouter::handle_get_analytics(const http_request& req, http_response& res
         size_t cards_pos     = path_clean.find("/cards/");
         size_t analytics_pos = path_clean.find("/analytics");
         if (cards_pos == std::string::npos || analytics_pos == std::string::npos) {
-            send_error(res, http::status::bad_request, "Invalid path");
+            send_error(res, http::status::bad_request,
+                       "INVALID_REQUEST", "Invalid path",
+                       error_codes::INVALID_REQUEST);
             return;
         }
         std::string card_id = path_clean.substr(
@@ -824,7 +985,8 @@ void APIRouter::handle_get_analytics(const http_request& req, http_response& res
         send_json(res, http::status::ok, resp);
 
     } catch (const std::exception& e) {
-        send_error(res, http::status::internal_server_error, e.what());
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
     }
 }
 

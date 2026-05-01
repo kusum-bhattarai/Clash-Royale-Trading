@@ -177,6 +177,30 @@ Test coverage: OrderBook matching (exact fill, partial fill, multi-fill, no-matc
 
 ---
 
+## Correctness Verification (TSAN / ASAN)
+
+The matching engine ships with ThreadSanitizer and AddressSanitizer build targets. These are separate builds — never combine them.
+
+**ThreadSanitizer** — detects data races in the matching engine's `shared_mutex` read/write paths:
+
+```bash
+bash backend/scripts/run_tsan.sh
+```
+
+Runs `test_order_book` and `BM_ConcurrentOrders` (1/2/4/8 threads) under TSAN. Any race conditions appear as `ThreadSanitizer: data race` output.
+
+**AddressSanitizer** — detects heap/stack memory errors across the order, order book, and auth unit tests:
+
+```bash
+bash backend/scripts/run_asan.sh
+```
+
+Runs `test_order`, `test_order_book`, and `test_auth` under ASAN. Any memory errors appear as `AddressSanitizer: ...` output.
+
+> **Results**: Zero races detected by ThreadSanitizer (9/9 `test_order_book` tests + `BM_ConcurrentOrders` at 1/2/4/8 threads). Zero memory errors detected by AddressSanitizer (27/27 tests across `test_order`, `test_order_book`, `test_auth`). Verified on Apple Silicon (AppleClang 17, macOS).
+
+---
+
 ## Stack
 
 | Layer | Technology |

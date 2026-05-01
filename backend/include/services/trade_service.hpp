@@ -41,14 +41,13 @@ public:
     // All trades succeed together or all fail together
     void execute_trades(const std::vector<core::Trade>& trades);
     
-    // Get recent trades for a specific card
-    // Returns a vector of trades sorted by timestamp descending
-    std::vector<core::Trade> get_card_trades(const std::string& card_id, 
-                                             int limit = 50) const;
-    
-    // Get recent trades for a specific user (as buyer or seller)
-    std::vector<core::Trade> get_user_trades(const std::string& user_id, 
-                                             int limit = 50) const;
+    // Get recent trades for a specific card, sorted by timestamp descending
+    std::vector<core::Trade> get_card_trades(const std::string& card_id,
+                                             int limit = 50, int offset = 0) const;
+
+    // Get recent trades for a specific user (as buyer or seller), sorted by timestamp descending
+    std::vector<core::Trade> get_user_trades(const std::string& user_id,
+                                             int limit = 50, int offset = 0) const;
     
     // Get trade by its unique ID
     std::optional<core::Trade> get_trade(const std::string& trade_id) const;
