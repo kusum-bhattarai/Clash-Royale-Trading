@@ -86,6 +86,11 @@ target_link_libraries(clash_trading PRIVATE
     CURL::libcurl
 )
 
+# libuuid: implicit on macOS, explicit on Linux
+if(UNIX AND NOT APPLE)
+    target_link_libraries(clash_trading PRIVATE uuid)
+endif()
+
 target_include_directories(clash_trading PRIVATE ${CMAKE_SOURCE_DIR}/include)
 enable_testing()
 add_subdirectory(tests)

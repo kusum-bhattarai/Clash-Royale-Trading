@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: clash_trading
+          POSTGRES_USER: clash_user
+          POSTGRES_PASSWORD: clash_pass_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clash_user -d clash_trading"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/backend/vcpkg
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build \
+            libssl-dev \
+            libpq-dev \
+            libcurl4-openssl-dev \
+            uuid-dev \
+            postgresql-client \
+            curl zip unzip tar
+
+      - name: Cache vcpkg (binary + installed packages)
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/vcpkg
+            backend/vcpkg_installed
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('backend/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Bootstrap vcpkg
+        run: |
+          if [ ! -f "$VCPKG_ROOT/vcpkg" ]; then
+            git clone https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+            "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+
+      - name: Install vcpkg dependencies
+        run: |
+          cd backend
+          "$VCPKG_ROOT/vcpkg" install --triplet x64-linux
+
+      - name: Configure
+        run: |
+          cmake -S backend -B backend/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -G Ninja
+
+      - name: Build
+        run: cmake --build backend/build -j$(nproc)
+
+      - name: Run database migrations
+        env:
+          PGPASSWORD: clash_pass_dev
+        run: |
+          psql -h 127.0.0.1 -U clash_user -d clash_trading \
+            -f backend/database/migrations/001_initial_schema.sql
+          psql -h 127.0.0.1 -U clash_user -d clash_trading \
+            -f backend/database/migrations/002_price_history.sql
+
+      - name: Run unit tests
+        run: ctest --test-dir backend/build --output-on-failure -j$(nproc)
+
+      - name: Benchmark dry run
+        run: |
+          ./backend/build/bin/order_book_bench \
+            --benchmark_min_time=0.1s \
+            --benchmark_format=console

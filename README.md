@@ -1,5 +1,7 @@
 # Clash Royale Trading Exchange
 
+![CI](https://github.com/kusum-bhattarai/Clash-Royale-Trading/actions/workflows/ci.yml/badge.svg)
+
 A real-time card trading platform modeled on financial exchanges. Players trade Clash Royale cards on a live order book with price-time priority matching, atomic settlement, and WebSocket-driven market data.
 
 Built with a C++ matching engine, PostgreSQL settlement layer, and a React/TypeScript frontend.
@@ -8,19 +10,20 @@ Built with a C++ matching engine, PostgreSQL settlement layer, and a React/TypeS
 
 ## Performance
 
-Benchmarked with [Google Benchmark](https://github.com/google/benchmark) on Apple M-series under high system load — numbers are conservative.
+Benchmarked with [Google Benchmark](https://github.com/google/benchmark). CI numbers (Linux x86, 2 vCPU GitHub runner) are the reproducible baseline; local numbers are on Apple M-series.
 
-| Metric | Result |
-|--------|--------|
-| Single-fill match latency (median) | **4.7 µs** |
-| — of which SHA-256 Merkle hash | **2.9 µs (62%)** |
-| Order book snapshot at 100 levels | **1.1 µs** |
-| Throughput — 1 thread | **~540k orders/sec** |
-| Throughput — 8 threads | **~170k orders/sec** |
-| Cancel order (O(n) in book depth) | 0.96 µs @ 10 orders · 25.7 µs @ 500 |
+| Metric | CI Linux x86 | Local macOS M-series |
+|--------|-------------|----------------------|
+| Single-fill match latency | **3.7 µs** | 4.7 µs (high load) |
+| — of which SHA-256 Merkle hash | **2.2 µs (59%)** | 2.9 µs (62%) |
+| Order book snapshot — 100 levels | 1.9 µs | **1.1 µs** |
+| Limit insertion — 10 orders | **1.2 µs** | — |
+| Throughput — 1 thread | **411k orders/sec** | 540k orders/sec |
+| Throughput — 8 threads | 78.7k orders/sec† | **170k orders/sec** |
+| Cancel order (O(n) in book depth) | 1.1 µs @ 10 · 34.7 µs @ 500 | 0.96 µs @ 10 · 25.7 µs @ 500 |
 
-> Benchmarks run under load avg 21/11 cores. Numbers improve ~2-3x on idle hardware.
-> SHA-256 accounts for 62% of match latency — the primary optimization target if throughput becomes a bottleneck.
+> †8-thread CI number reflects 8 threads on 2 vCPUs (heavy context-switch overhead), not a throughput ceiling.
+> SHA-256 accounts for ~60% of match latency — the primary optimization target if throughput becomes a bottleneck.
 
 ```bash
 bash backend/benchmarks/run_benchmarks.sh
@@ -93,7 +96,7 @@ Raw results: [`backend/benchmarks/results/`](backend/benchmarks/results/)
 Bids stored as `std::map<double, std::deque<Order>, std::greater<>>` (descending), asks as ascending. `map::begin()` gives O(1) best-price access; `deque::front()`/`pop_front()` gives O(1) time-priority within a price level. Match loop is O(k) in number of fills.
 
 **Reader-writer locking (`shared_mutex`)**
-`get_snapshot()` — called on every WebSocket broadcast — acquires a `shared_lock`, allowing concurrent reads. Only `match_order` and `cancel_order` take `unique_lock`. In a read-heavy market-data workload this outperforms a plain mutex. Benchmarks show the tradeoff: single-threaded throughput is ~540k orders/sec; at 8 concurrent writers it drops to ~170k due to `unique_lock` contention.
+`get_snapshot()` — called on every WebSocket broadcast — acquires a `shared_lock`, allowing concurrent reads. Only `match_order` and `cancel_order` take `unique_lock`. In a read-heavy market-data workload this outperforms a plain mutex. Benchmarks show the tradeoff: single-threaded throughput is ~411k orders/sec on the CI runner; at 8 concurrent writers on 2 vCPUs it drops to ~79k due to `unique_lock` contention and context-switch overhead.
 
 **SHA-256 Merkle hash per trade**
 Every trade record carries a SHA-256 hash of its fields (trade ID, buyer, seller, card, price, quantity, both order IDs). Any post-settlement mutation of a trade record invalidates the hash — verifiable with `Trade::verify_integrity()`. The hash is computed inside the write lock (2.9 µs, 62% of match latency); moving it outside is the identified optimization path.

@@ -1,5 +1,6 @@
 #include "core/order_book.hpp"
 #include <algorithm>
+#include <mutex>
 #include <sstream>
 #include <iomanip>
 #include <random>
