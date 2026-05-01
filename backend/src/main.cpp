@@ -194,14 +194,16 @@ int main(int argc, char* argv[]) {
                   config.server_host(), 8081);
         fmt::print("Press Ctrl+C to stop\n\n");
         
-        fmt::print("Available endpoints:\n");
-        fmt::print("  POST   /api/auth/register    - Register new user\n");
-        fmt::print("  POST   /api/auth/login       - Login user\n");
-        fmt::print("  POST   /api/orders           - Place order\n");
-        fmt::print("  DELETE /api/orders/:id       - Cancel order\n");
-        fmt::print("  GET    /api/users/:id/portfolio - Get portfolio\n");
-        fmt::print("  GET    /api/users/:id/orders - Get user orders\n");
-        fmt::print("  GET    /api/cards/:id/orderbook - Get order book\n");
+        fmt::print("Available endpoints (v1):\n");
+        fmt::print("  POST   /api/v1/auth/register         - Register new user\n");
+        fmt::print("  POST   /api/v1/auth/login            - Login user\n");
+        fmt::print("  POST   /api/v1/orders                - Place order\n");
+        fmt::print("  DELETE /api/v1/orders/:id            - Cancel order\n");
+        fmt::print("  GET    /api/v1/users/:id/portfolio   - Get portfolio\n");
+        fmt::print("  GET    /api/v1/users/:id/orders      - Get user orders\n");
+        fmt::print("  GET    /api/v1/cards/:id/orderbook   - Get order book\n");
+        fmt::print("  GET    /api/v1/cards/:id/analytics   - Market microstructure\n");
+        fmt::print("  GET    /api/v1/cards/:id/price       - Reference price\n");
         fmt::print("  ...and more!\n\n");
         
         // Run the I/O service

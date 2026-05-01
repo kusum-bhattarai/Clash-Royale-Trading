@@ -196,14 +196,12 @@ void TradeService::record_trade(pqxx::work& txn, const core::Trade& trade) {
 }
 
 std::vector<core::Trade> TradeService::get_card_trades(const std::string& card_id,
-                                                       int limit) const {
-    // Using parameterized query
+                                                       int limit, int offset) const {
     auto result = db_->with_transaction([&](pqxx::work& txn) {
         return txn.exec_params(
             "SELECT * FROM trades WHERE card_id = $1 "
-            "ORDER BY executed_at DESC LIMIT $2",
-            card_id,
-            limit
+            "ORDER BY executed_at DESC LIMIT $2 OFFSET $3",
+            card_id, limit, offset
         );
     });
     
@@ -218,14 +216,12 @@ std::vector<core::Trade> TradeService::get_card_trades(const std::string& card_i
 }
 
 std::vector<core::Trade> TradeService::get_user_trades(const std::string& user_id,
-                                                       int limit) const {
-    // Using parameterized query
+                                                       int limit, int offset) const {
     auto result = db_->with_transaction([&](pqxx::work& txn) {
         return txn.exec_params(
             "SELECT * FROM trades WHERE buyer_id = $1 OR seller_id = $1 "
-            "ORDER BY executed_at DESC LIMIT $2",
-            user_id,
-            limit
+            "ORDER BY executed_at DESC LIMIT $2 OFFSET $3",
+            user_id, limit, offset
         );
     });
     
