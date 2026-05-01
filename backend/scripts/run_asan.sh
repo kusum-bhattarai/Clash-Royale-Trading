@@ -7,7 +7,7 @@
 #   - test_auth:        JWT generate/verify, password hash/verify
 #
 # TSAN and ASAN must NOT be combined — use separate build directories.
-# On macOS, ASAN_OPTIONS=detect_leaks=0 avoids false positives from system allocators.
+# ASAN_OPTIONS=detect_leaks=0 avoids macOS false positives from system allocators.
 #
 # Usage (from project root):
 #   bash backend/scripts/run_asan.sh
@@ -21,16 +21,41 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$BACKEND_DIR/build_asan"
-NCPU=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
+NCPU=$(sysctl -n hw.logicalcpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 
-# macOS leak detection requires SIP disabled; disable it to avoid false positives
+# Suppress macOS leak-detection false positives (requires SIP disabled to work accurately)
 export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 
+# Locate vcpkg toolchain: prefer VCPKG_ROOT env, then ~/vcpkg, then read from existing build cache
+find_toolchain() {
+    if [[ -n "${VCPKG_ROOT:-}" && -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
+        echo "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        return
+    fi
+    if [[ -f "$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake" ]]; then
+        echo "$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        return
+    fi
+    local cache="$BACKEND_DIR/build/CMakeCache.txt"
+    if [[ -f "$cache" ]]; then
+        grep -m1 "VCPKG_ROOT\|CMAKE_TOOLCHAIN_FILE" "$cache" \
+          | grep -o '"[^"]*vcpkg.cmake"' | tr -d '"' || true
+    fi
+}
+
+TOOLCHAIN=$(find_toolchain)
+if [[ -z "$TOOLCHAIN" ]]; then
+    echo "ERROR: Could not find vcpkg toolchain. Set VCPKG_ROOT or install vcpkg to ~/vcpkg."
+    exit 1
+fi
+echo "Using toolchain: $TOOLCHAIN"
+
+echo ""
 echo "=== AddressSanitizer Build ==="
 cmake -B "$BUILD_DIR" "$BACKEND_DIR" \
   -DCMAKE_BUILD_TYPE=Asan \
-  -DCMAKE_TOOLCHAIN_FILE="$BACKEND_DIR/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF \
+  -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
+  -DVCPKG_INSTALLED_DIR="$BACKEND_DIR/build/vcpkg_installed" \
   -Wno-dev
 
 echo ""
@@ -54,5 +79,4 @@ echo "=== ASAN run complete ==="
 echo "If no 'AddressSanitizer:' lines appeared above, all tested code"
 echo "passes AddressSanitizer with zero detected memory errors."
 echo ""
-echo "Add to README:"
-echo "  Memory error free: verified with AddressSanitizer (order, order_book, auth unit tests)"
+echo "Update the README 'Results' line with your findings."
