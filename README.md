@@ -25,11 +25,24 @@ Benchmarked with [Google Benchmark](https://github.com/google/benchmark). CI num
 > †8-thread CI number reflects 8 threads on 2 vCPUs (heavy context-switch overhead), not a throughput ceiling.
 > SHA-256 accounts for ~60% of match latency — the primary optimization target if throughput becomes a bottleneck.
 
+**End-to-end (HTTP round-trip)** — measured with [k6](https://k6.io), 50 VU steady-state / 100 VU spike, 74k requests:
+
+| p50 | p90 | p95 | p99 | Peak throughput | 5xx rate |
+|-----|-----|-----|-----|-----------------|----------|
+| **4.2 ms** | 31.1 ms | 42.7 ms | **57.8 ms** | **353 req/s** | **0.00%** |
+
+> p50/p90 gap reflects a bimodal distribution: fast-path order rejections (validation only, ~1ms) vs. full DB-write orders (~30ms).
+> In-process matching (µs above) and HTTP round-trip (ms here) measure different things — both matter.
+
 ```bash
+# In-process matching latency (Google Benchmark)
 bash backend/benchmarks/run_benchmarks.sh
+
+# HTTP round-trip latency (k6, requires running server)
+bash backend/load_tests/run_load_test.sh
 ```
 
-Raw results: [`backend/benchmarks/results/`](backend/benchmarks/results/)
+Raw results: [`backend/benchmarks/results/`](backend/benchmarks/results/) · [`backend/load_tests/results/`](backend/load_tests/results/)
 
 ---
 
