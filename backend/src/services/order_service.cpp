@@ -1,6 +1,8 @@
 #include "services/order_service.hpp"
+#include "utils/logger.hpp"
 #include <uuid/uuid.h>
 #include <sstream>
+#include <chrono>
 
 namespace clash_trading {
 namespace services {
@@ -43,19 +45,33 @@ PlaceOrderResponse OrderService::place_order(const PlaceOrderRequest& request) {
     order.status = core::OrderStatus::PENDING;
     order.timestamp = std::chrono::system_clock::now();
     
+    LOG_INFO("[ORDER] user={} card={} type={} mode={} qty={} price={} order_id={}",
+             order.user_id, order.card_id,
+             core::order_type_to_string(order.type),
+             core::order_mode_to_string(order.mode),
+             order.quantity, order.price, order.order_id);
+
     // Add order to database
     insert_order(order);
-    
+
     // Route to OrderBook for matching
     auto order_book = get_or_create_order_book(request.card_id);
+    auto match_start = std::chrono::steady_clock::now();
     std::vector<core::Trade> trades = order_book->match_order(order);
-    
+    auto match_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now() - match_start).count();
+
     // Execute trades if any occurred
     if (!trades.empty()) {
+        for (const auto& t : trades) {
+            LOG_INFO("[MATCH] trade_id={} buyer={} seller={} card={} price={} qty={} latency_ns={}",
+                     t.trade_id, t.buyer_id, t.seller_id, t.card_id,
+                     t.price, t.quantity, match_ns);
+        }
         try {
             trade_service_->execute_trades(trades);
         } catch (const std::exception& e) {
-            // Trade execution failed - log error but order is already in book
+            LOG_ERROR("[ORDER] trade execution failed order_id={} error={}", order.order_id, e.what());
             throw TradeExecutionException(
                 "Order placed but trade execution failed: " + std::string(e.what())
             );

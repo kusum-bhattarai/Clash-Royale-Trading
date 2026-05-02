@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 
 #include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "database/postgres_client.hpp"
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
@@ -42,6 +43,10 @@ int main(int argc, char* argv[]) {
         fmt::print("🏆 Clash Royale Trading Platform v1.0.0\n");
         fmt::print("High-Performance Card Trading Engine\n\n");
         
+        // Initialize logger (console + rotating file at logs/trading.log)
+        clash_trading::utils::init_logger("logs/trading.log");
+        LOG_INFO("Clash Royale Trading Platform v1.0.0 starting");
+
         // Load configuration
         auto& config = clash::Config::instance();
         config.load_from_file(".env");

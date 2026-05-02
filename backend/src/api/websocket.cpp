@@ -1,4 +1,5 @@
 #include "api/websocket.hpp"
+#include "utils/logger.hpp"
 #include <fmt/core.h>
 #include <random>
 
@@ -210,14 +211,15 @@ void WebSocketServer::remove_session(std::shared_ptr<WebSocketSession> session) 
     }
 }
 
-void WebSocketServer::broadcast_to_channel(const std::string& channel, 
+void WebSocketServer::broadcast_to_channel(const std::string& channel,
                                            const nlohmann::json& message) {
     std::lock_guard<std::mutex> lock(channels_mutex_);
-    
+
     auto it = channels_.find(channel);
     if (it != channels_.end()) {
         std::string msg_str = message.dump();
-        
+        LOG_DEBUG("[WS] channel={} subscribers={} payload_bytes={}",
+                  channel, it->second.size(), msg_str.size());
         for (auto& session : it->second) {
             session->send(msg_str);
         }

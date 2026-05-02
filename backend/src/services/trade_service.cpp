@@ -1,5 +1,7 @@
 #include "services/trade_service.hpp"
+#include "utils/logger.hpp"
 #include <sstream>
+#include <chrono>
 
 namespace clash_trading {
 namespace services {
@@ -13,41 +15,32 @@ TradeService::TradeService(
 
 void TradeService::execute_trade(const core::Trade& trade) {
     try {
+        auto t0 = std::chrono::steady_clock::now();
         db_->with_transaction([&](pqxx::work& txn) {
-            // Debit buyer's gold (negative delta)
             int64_t buyer_cost = static_cast<int64_t>(trade.total_value);
             update_balance(txn, trade.buyer_id, -buyer_cost);
-            
-            // Credit seller's gold (positive delta)
-            int64_t seller_credit = static_cast<int64_t>(trade.total_value);
-            update_balance(txn, trade.seller_id, seller_credit);
-            
-            // Transfer cards from seller to buyer
-            transfer_cards(txn, trade.seller_id, trade.buyer_id, 
+            update_balance(txn, trade.seller_id, static_cast<int64_t>(trade.total_value));
+            transfer_cards(txn, trade.seller_id, trade.buyer_id,
                           trade.card_id, trade.quantity);
-            
-            // Record trade in immutable ledger
             record_trade(txn, trade);
-            
             return 0;
         });
-        
-        // Emit event for WebSocket broadcasting
+        auto txn_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - t0).count();
+        LOG_INFO("[SETTLE] trade_id={} card={} price={} qty={} txn_duration_us={} status=ok",
+                 trade.trade_id, trade.card_id, trade.price, trade.quantity, txn_us);
+
         if (on_trade_executed_) {
             on_trade_executed_(trade);
         }
-
         if (price_agg_service_) {
             price_agg_service_->on_trade(
-                trade.card_id,
-                trade.price,
-                trade.quantity,
+                trade.card_id, trade.price, trade.quantity,
                 std::chrono::system_clock::now()
             );
         }
-        
     } catch (const std::exception& e) {
-        // Transaction automatically rolled back by with_transaction
+        LOG_ERROR("[SETTLE] trade_id={} status=failed error={}", trade.trade_id, e.what());
         throw TradeExecutionException(
             "Failed to execute trade " + trade.trade_id + ": " + std::string(e.what())
         );
