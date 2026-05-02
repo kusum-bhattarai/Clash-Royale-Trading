@@ -14,7 +14,8 @@ APIRouter::APIRouter(std::shared_ptr<HTTPServer> server,
                      std::shared_ptr<services::TradeService> trade_service,
                      std::shared_ptr<services::UserService> user_service,
                      std::shared_ptr<services::PriceAggregationService> price_agg_service,
-                     std::shared_ptr<services::AnalyticsService> analytics_service)
+                     std::shared_ptr<services::AnalyticsService> analytics_service,
+                     std::shared_ptr<services::DynamicPricingService> pricing_service)
     : server_(server)
     , auth_service_(auth_service)
     , db_(db)
@@ -22,7 +23,8 @@ APIRouter::APIRouter(std::shared_ptr<HTTPServer> server,
     , trade_service_(trade_service)
     , user_service_(user_service)
     , price_agg_service_(price_agg_service)
-    , analytics_service_(analytics_service) {}
+    , analytics_service_(analytics_service)
+    , pricing_service_(pricing_service) {}
 
 void APIRouter::register_routes() {
     using namespace std::placeholders;
@@ -76,7 +78,10 @@ void APIRouter::register_routes() {
     // Analytics routes
     server_->register_route(http::verb::get, "/api/v1/cards/:cardId/analytics",
         std::bind(&APIRouter::handle_get_analytics, this, _1, _2));
-    
+
+    server_->register_route(http::verb::get, "/api/v1/cards/:cardId/price",
+        std::bind(&APIRouter::handle_get_card_price, this, _1, _2));
+
     fmt::print(" All routes registered!\n\n");
 }
 
@@ -980,6 +985,46 @@ void APIRouter::handle_get_analytics(const http_request& req, http_response& res
                 {"1h", snap.volatility_1h}
             }},
             {"vwap", snap.vwap}
+        };
+
+        send_json(res, http::status::ok, resp);
+
+    } catch (const std::exception& e) {
+        send_error(res, http::status::internal_server_error,
+                   "INTERNAL_ERROR", e.what(), error_codes::INTERNAL_ERROR);
+    }
+}
+
+void APIRouter::handle_get_card_price(const http_request& req, http_response& res) {
+    try {
+        std::string path = std::string(req.target());
+        size_t query_pos = path.find('?');
+        std::string path_clean = (query_pos != std::string::npos)
+                                 ? path.substr(0, query_pos) : path;
+
+        size_t cards_pos = path_clean.find("/cards/");
+        size_t price_pos = path_clean.find("/price");
+        if (cards_pos == std::string::npos || price_pos == std::string::npos) {
+            send_error(res, http::status::bad_request,
+                       "INVALID_REQUEST", "Invalid path",
+                       error_codes::INVALID_REQUEST);
+            return;
+        }
+        std::string card_id = path_clean.substr(
+            cards_pos + 7,
+            price_pos - (cards_pos + 7)
+        );
+
+        auto result = pricing_service_->compute_reference_price(card_id);
+
+        nlohmann::json resp = {
+            {"reference_price", result.reference_price},
+            {"factors", {
+                {"base",         result.factors.base},
+                {"sd",           result.factors.sd},
+                {"meta",         result.factors.meta},
+                {"vol_discount", result.factors.vol_discount}
+            }}
         };
 
         send_json(res, http::status::ok, resp);
