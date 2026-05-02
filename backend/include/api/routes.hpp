@@ -5,6 +5,7 @@
 #include "api/auth.hpp"
 #include "api/rate_limiter.hpp"
 #include "services/analytics_service.hpp"
+#include "services/dynamic_pricing_service.hpp"
 #include "services/order_service.hpp"
 #include "services/trade_service.hpp"
 #include "services/user_service.hpp"
@@ -27,6 +28,7 @@ private:
     std::shared_ptr<services::UserService> user_service_;
     std::shared_ptr<services::PriceAggregationService> price_agg_service_;
     std::shared_ptr<services::AnalyticsService> analytics_service_;
+    std::shared_ptr<services::DynamicPricingService> pricing_service_;
     RateLimiter rate_limiter_;  // 10 orders/sec per user_id, burst 10
 
 public:
@@ -37,7 +39,8 @@ public:
              std::shared_ptr<services::TradeService> trade_service,
              std::shared_ptr<services::UserService> user_service,
              std::shared_ptr<services::PriceAggregationService> price_agg_service,
-             std::shared_ptr<services::AnalyticsService> analytics_service);
+             std::shared_ptr<services::AnalyticsService> analytics_service,
+             std::shared_ptr<services::DynamicPricingService> pricing_service);
              
     
     // Register all routes
@@ -75,6 +78,9 @@ private:
 
     // Analytics Routes
     void handle_get_analytics(const http_request& req, http_response& res);
+
+    // Pricing Routes
+    void handle_get_card_price(const http_request& req, http_response& res);
     
     // Extract user ID from JWT token in Authorization header
     std::optional<std::string> get_user_from_auth(const http_request& req);

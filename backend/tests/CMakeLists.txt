@@ -39,12 +39,15 @@ add_executable(test_trade_service
     ${CMAKE_SOURCE_DIR}/src/services/price_aggregation_service.cpp
     ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
     ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
+    ${CMAKE_SOURCE_DIR}/src/utils/logger.cpp
 )
-target_link_libraries(test_trade_service PRIVATE 
-    GTest::gtest 
+target_link_libraries(test_trade_service PRIVATE
+    GTest::gtest
     GTest::gtest_main
     libpqxx::pqxx
     OpenSSL::Crypto
+    spdlog::spdlog
+    fmt::fmt
 )
 target_include_directories(test_trade_service PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME TradeServiceTests COMMAND test_trade_service)
@@ -72,12 +75,15 @@ add_executable(test_order_service
     ${CMAKE_SOURCE_DIR}/src/services/user_service.cpp
     ${CMAKE_SOURCE_DIR}/src/database/postgres_client.cpp
     ${CMAKE_SOURCE_DIR}/src/core/order_book.cpp
+    ${CMAKE_SOURCE_DIR}/src/utils/logger.cpp
 )
 target_link_libraries(test_order_service PRIVATE
     GTest::gtest
     GTest::gtest_main
     libpqxx::pqxx
     OpenSSL::Crypto
+    spdlog::spdlog
+    fmt::fmt
 )
 if(UNIX AND NOT APPLE)
     target_link_libraries(test_order_service PRIVATE uuid)
