@@ -45,6 +45,7 @@ endif()
 
 # Find packages
 find_package(fmt CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -57,6 +58,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_executable(clash_trading
     src/main.cpp
     src/utils/config.cpp
+    src/utils/logger.cpp
     src/core/order_book.cpp
     src/database/postgres_client.cpp
     src/services/order_service.cpp
@@ -79,6 +81,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 # Link libraries
 target_link_libraries(clash_trading PRIVATE
     fmt::fmt
+    spdlog::spdlog
     nlohmann_json::nlohmann_json
     libpqxx::pqxx
     OpenSSL::Crypto
