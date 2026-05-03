@@ -116,6 +116,9 @@ private:
     
     // Calculate required gold for a buy order
     int64_t calculate_required_gold(const PlaceOrderRequest& request) const;
+
+    // Rebuild in-memory order books from PENDING/PARTIAL orders in DB
+    void load_pending_orders();
 };
 
 } // namespace services

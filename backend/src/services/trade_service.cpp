@@ -1,4 +1,5 @@
 #include "services/trade_service.hpp"
+#include "services/user_service.hpp"
 #include "utils/logger.hpp"
 #include <sstream>
 #include <chrono>
@@ -23,6 +24,8 @@ void TradeService::execute_trade(const core::Trade& trade) {
             transfer_cards(txn, trade.seller_id, trade.buyer_id,
                           trade.card_id, trade.quantity);
             record_trade(txn, trade);
+            award_xp(txn, trade.buyer_id, 10);
+            award_xp(txn, trade.seller_id, 10);
             return 0;
         });
         auto txn_us = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -51,13 +54,14 @@ void TradeService::execute_trades(const std::vector<core::Trade>& trades) {
     try {
         db_->with_transaction([&](pqxx::work& txn) {
             for (const auto& trade : trades) {
-                // Execute each trade's steps within the same transaction
                 int64_t cost = static_cast<int64_t>(trade.total_value);
                 update_balance(txn, trade.buyer_id, -cost);
                 update_balance(txn, trade.seller_id, cost);
-                transfer_cards(txn, trade.seller_id, trade.buyer_id, 
+                transfer_cards(txn, trade.seller_id, trade.buyer_id,
                               trade.card_id, trade.quantity);
                 record_trade(txn, trade);
+                award_xp(txn, trade.buyer_id, 10);
+                award_xp(txn, trade.seller_id, 10);
             }
             return 0;
         });
@@ -242,6 +246,23 @@ std::optional<core::Trade> TradeService::get_trade(const std::string& trade_id) 
     }
     
     return parse_trade_from_row(result[0]);
+}
+
+void TradeService::award_xp(pqxx::work& txn, const std::string& user_id, int xp_delta) {
+    txn.exec_params(
+        "UPDATE users "
+        "SET xp = xp + $1, "
+        "    trader_level = CASE "
+        "        WHEN xp + $1 >= 10000 THEN 'Ultimate Champion' "
+        "        WHEN xp + $1 >= 2000  THEN 'Grand Champion' "
+        "        WHEN xp + $1 >= 500   THEN 'Master' "
+        "        WHEN xp + $1 >= 100   THEN 'Challenger' "
+        "        ELSE 'Goblin Stadium' "
+        "    END "
+        "WHERE user_id = $2",
+        xp_delta,
+        user_id
+    );
 }
 
 core::Trade TradeService::parse_trade_from_row(const pqxx::row& row) const {

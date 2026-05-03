@@ -102,12 +102,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUser = async () => {
     if (!user) return;
-    
+
     try {
-      const portfolio = await usersAPI.getPortfolio(user.user_id);
+      const [portfolio, stats] = await Promise.all([
+        usersAPI.getPortfolio(user.user_id),
+        usersAPI.getStats(user.user_id),
+      ]);
       const updatedUser = {
         ...user,
-        gold_balance: portfolio.gold_balance
+        gold_balance: portfolio.gold_balance,
+        xp: stats.xp,
+        trader_level: stats.trader_level,
+        total_trades: stats.total_trades,
       };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));

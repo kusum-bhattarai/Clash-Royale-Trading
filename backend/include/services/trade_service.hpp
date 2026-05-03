@@ -65,7 +65,10 @@ private:
     
     // Record trade in the database within a transaction
     void record_trade(pqxx::work& txn, const core::Trade& trade);
-    
+
+    // Award XP to a user and recompute their rank atomically within a transaction
+    void award_xp(pqxx::work& txn, const std::string& user_id, int xp_delta);
+
     // Parse a Trade object from a database row
     core::Trade parse_trade_from_row(const pqxx::row& row) const;
 };

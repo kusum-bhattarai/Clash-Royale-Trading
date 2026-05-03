@@ -27,6 +27,9 @@ class WebSocketClient {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
       }
+      // Notify listeners so they can resync state after reconnect
+      const handlers = this.messageHandlers.get('ws_connected');
+      if (handlers) handlers.forEach(h => h({}));
     };
 
     this.ws.onmessage = (event) => {

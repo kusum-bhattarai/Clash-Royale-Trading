@@ -206,7 +206,7 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
         auto result = db_->with_transaction([&](pqxx::work& txn) {
             return txn.exec_params(
                 "SELECT user_id, username, password_hash, email, gold_balance, "
-                "trader_level, total_trades FROM users WHERE username = $1",
+                "trader_level, total_trades, xp FROM users WHERE username = $1",
                 username
             );
         });
@@ -240,7 +240,8 @@ void APIRouter::handle_login(const http_request& req, http_response& res) {
                 {"email", result[0]["email"].as<std::string>()},
                 {"gold_balance", result[0]["gold_balance"].as<int64_t>()},
                 {"trader_level", result[0]["trader_level"].as<std::string>()},
-                {"total_trades", result[0]["total_trades"].as<int>()}
+                {"total_trades", result[0]["total_trades"].as<int>()},
+                {"xp", result[0]["xp"].as<int>()}
             }}
         };
         
@@ -540,7 +541,8 @@ void APIRouter::handle_get_stats(const http_request& req, http_response& res) {
             {"total_volume", stats.total_volume},
             {"buy_count", stats.buy_count},
             {"sell_count", stats.sell_count},
-            {"trader_level", stats.trader_level}
+            {"trader_level", stats.trader_level},
+            {"xp", stats.xp}
         };
         
         send_json(res, http::status::ok, stats_json);
