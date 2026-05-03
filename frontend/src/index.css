@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --arena-bg: #0a0a0f;
+  --arena-surface: #0f1117;
+  --arena-border: rgba(99, 102, 241, 0.2);
+  --neon-cyan: #00d4ff;
+  --neon-purple: #a855f7;
+  --neon-gold: #fbbf24;
+  --bull-green: #00ff88;
+  --bear-red: #ff3b5c;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -9,6 +20,16 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a;
+  background-color: var(--arena-bg);
   color: #f8fafc;
 }
+
+/* Subtle hex-grid background overlay */
+.hex-grid-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zM28 100L0 84V66l28 16 28-16v18L28 100z' fill='none' stroke='rgba(99,102,241,0.06)' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+/* Scrollbar styling for terminal panels */
+.arena-scroll::-webkit-scrollbar { width: 4px; }
+.arena-scroll::-webkit-scrollbar-track { background: transparent; }
+.arena-scroll::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
