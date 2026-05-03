@@ -1,156 +1,168 @@
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { usersAPI, cardsAPI } from '../services/api';
+import type { Trade, Card } from '../types/api';
+import RankBadge from '../components/RankBadge';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [topCards, setTopCards] = useState<Card[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    usersAPI.getTrades(user.user_id, 5).then(setRecentTrades).catch(() => {});
+    cardsAPI.getAll().then(cards => {
+      // Sort by usage_rate desc as a proxy for "market movers"
+      const sorted = [...cards].sort((a, b) => (b.usage_rate ?? 0) - (a.usage_rate ?? 0));
+      setTopCards(sorted.slice(0, 3));
+    }).catch(() => {});
+  }, [user]);
+
+  const stats = [
+    { label: 'Gold Balance', value: user?.gold_balance.toLocaleString() ?? '—', color: 'text-neon-gold', border: 'border-neon-gold/20' },
+    { label: 'Total Trades', value: user?.total_trades ?? 0, color: 'text-neon-cyan', border: 'border-neon-cyan/20' },
+    { label: 'XP Earned', value: user?.xp ?? 0, color: 'text-neon-purple', border: 'border-neon-purple/20' },
+    { label: 'Rank', value: user?.trader_level ?? 'Goblin Stadium', color: 'text-bull-green', border: 'border-bull-green/20' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-clash-dark via-purple-900 to-clash-dark">
-      {/* Navigation Bar */}
-      <nav className="bg-slate-800/50 backdrop-blur-lg border-b border-purple-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-6">
-              <h1 className="text-2xl font-bold text-white">
-                Clash Trading
-              </h1>
-              
-              {/* Navigation Links */}
-              <div className="hidden md:flex gap-4">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="px-4 py-2 text-white font-semibold border-b-2 border-purple-500"
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => navigate('/trading')}
-                  className="px-4 py-2 text-slate-300 hover:text-white font-semibold 
-                           hover:border-b-2 hover:border-orange-500 transition"
-                >
-                  Trading
-                </button>
-                <button
-                  onClick={() => navigate('/portfolio')}
-                  className="px-4 py-2 text-slate-300 hover:text-white font-semibold 
-                           hover:border-b-2 hover:border-blue-500 transition"
-                >
-                  Portfolio
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-arena-bg hex-grid-bg text-white">
 
-            {/* User Info & Logout */}
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-sm text-slate-400">Welcome back,</p>
-                <p className="text-white font-semibold">{user?.username}</p>
-              </div>
-              
-              <div className="text-right">
-                <p className="text-sm text-slate-400">Gold Balance</p>
-                <p className="text-clash-gold font-bold text-lg">
-                  {user?.gold_balance.toLocaleString()}
-                </p>
-              </div>
-
+      {/* Nav */}
+      <nav className="border-b border-arena-border bg-arena-surface/80 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-orange-400 uppercase tracking-widest">
+              CR Exchange
+            </h1>
+            {[{ label: 'Dashboard', path: '/dashboard', active: true }, { label: 'Trading', path: '/trading' }, { label: 'Portfolio', path: '/portfolio' }].map(({ label, path, active }) => (
               <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/50 
-                         rounded-lg hover:bg-red-500/30 transition"
+                key={path}
+                onClick={() => navigate(path)}
+                className={`text-xs font-bold uppercase tracking-wide transition ${active ? 'text-white border-b-2 border-neon-gold pb-0.5' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                Logout
+                {label}
               </button>
-            </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-4">
+            {user && <RankBadge rank={user.trader_level || 'Goblin Stadium'} xp={user.xp ?? 0} compact />}
+            <button onClick={() => { logout(); navigate('/login'); }} className="text-xs text-bear-red/70 border border-bear-red/30 rounded px-3 py-1 hover:border-bear-red hover:text-bear-red transition uppercase tracking-wide">
+              Logout
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome Card */}
-        <div className="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Welcome to Clash Royale Trading!
-          </h2>
-          <p className="text-slate-300 text-lg">
-            Your account is active. You have{' '}
-            <span className="text-clash-gold font-bold">
-              {user?.gold_balance.toLocaleString()} gold
-            </span>{' '}
-            to start trading.
-          </p>
-        </div>
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Portfolio Value */}
-          <div className="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Portfolio Value</p>
-            <p className="text-3xl font-bold text-white">
-              {user?.gold_balance.toLocaleString()}
-            </p>
-            <p className="text-green-400 text-sm mt-2">+0.00%</p>
-          </div>
-
-          {/* Total Trades */}
-          <div className="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Total Trades</p>
-            <p className="text-3xl font-bold text-white">
-              {user?.total_trades || 0}
-            </p>
-            <p className="text-slate-400 text-sm mt-2">All time</p>
-          </div>
-
-          {/* Trader Level */}
-          <div className="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Trader Level</p>
-            <p className="text-3xl font-bold text-purple-400">
-              {user?.trader_level || 'CHALLENGER'}
-            </p>
-            <p className="text-slate-400 text-sm mt-2">Current rank</p>
+        {/* Hero banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-arena-border bg-arena-surface/50 p-8">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/5 via-transparent to-neon-cyan/5" />
+          <div className="relative flex items-center gap-6">
+            <div>
+              <p className="text-slate-500 text-sm uppercase tracking-widest">Welcome back,</p>
+              <h2 className="text-3xl font-black text-white">{user?.username}</h2>
+            </div>
+            {user && (
+              <div className="ml-4">
+                <RankBadge rank={user.trader_level || 'Goblin Stadium'} xp={user.xp ?? 0} />
+              </div>
+            )}
+            <div className="ml-auto text-right">
+              <p className="text-slate-500 text-xs uppercase tracking-widest">Gold Balance</p>
+              <p className="text-4xl font-black text-neon-gold font-mono">{user?.gold_balance.toLocaleString()}</p>
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions Grid */}
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-4">
+          {stats.map(({ label, value, color, border }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className={`bg-arena-surface/50 border ${border} rounded-xl p-5`}
+            >
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+              <p className={`text-2xl font-black font-mono ${color}`}>{value}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Two-column: Recent Trades + Market Movers */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Trading Card */}
-          <div className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 border border-orange-500/30 rounded-xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-4">Start Trading</h3>
-            <p className="text-slate-300 mb-6">
-              Trade all 121 Clash Royale cards on the live marketplace
-            </p>
-            <button
-              onClick={() => navigate('/trading')}
-              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 
-                       text-white font-bold rounded-lg shadow-lg hover:from-orange-600 
-                       hover:to-orange-700 transform hover:scale-105 transition-all"
-            >
-              Open Trading Interface
-            </button>
+
+          {/* Recent Trade History */}
+          <div className="bg-arena-surface/50 border border-arena-border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-arena-border flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Recent Trades</p>
+            </div>
+            <div className="divide-y divide-slate-800/50">
+              {recentTrades.length === 0 ? (
+                <p className="text-slate-600 text-sm text-center py-8">No trades yet — start trading!</p>
+              ) : (
+                recentTrades.map(trade => {
+                  const isBuy = trade.buyer_id === user?.user_id;
+                  return (
+                    <div key={trade.trade_id} className="flex items-center justify-between px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${isBuy ? 'bg-bull-green/10 text-bull-green' : 'bg-bear-red/10 text-bear-red'}`}>
+                          {isBuy ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="text-sm text-slate-300 font-semibold">{trade.card_id}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono font-bold text-neon-gold">{trade.total_value.toLocaleString()}g</p>
+                        <p className="text-xs text-slate-600">×{trade.quantity} @ {trade.price.toFixed(0)}g</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
-          {/* Portfolio Card */}
-          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-4">View Portfolio</h3>
-            <p className="text-slate-300 mb-6">
-              Track your holdings, P&L, and active orders
-            </p>
-            <button
-              onClick={() => navigate('/portfolio')}
-              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 
-                       text-white font-bold rounded-lg shadow-lg hover:from-blue-600 
-                       hover:to-purple-700 transform hover:scale-105 transition-all"
-            >
-              View My Portfolio
-            </button>
+          {/* Market Movers */}
+          <div className="bg-arena-surface/50 border border-arena-border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-arena-border">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Top Cards by Usage</p>
+            </div>
+            <div className="divide-y divide-slate-800/50">
+              {topCards.length === 0 ? (
+                <p className="text-slate-600 text-sm text-center py-8">Loading…</p>
+              ) : (
+                topCards.map((card, idx) => (
+                  <div key={card.card_id} className="flex items-center gap-4 px-5 py-3">
+                    <span className="text-xl font-black text-slate-600 w-6">#{idx + 1}</span>
+                    {card.icon_url && <img src={card.icon_url} alt={card.name} className="w-10 h-10 object-contain" />}
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white">{card.name}</p>
+                      <p className="text-xs text-slate-500 capitalize">{card.rarity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-mono font-bold text-neon-gold">{card.price}g</p>
+                      <p className="text-xs text-slate-500">{((card.usage_rate ?? 0) * 100).toFixed(1)}% usage</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-arena-border">
+              <button
+                onClick={() => navigate('/trading')}
+                className="w-full py-2.5 bg-gradient-to-r from-neon-gold/20 to-orange-500/20 text-neon-gold border border-neon-gold/30 rounded-lg font-bold uppercase tracking-wide text-sm hover:from-neon-gold/30 transition"
+              >
+                Open Trading Interface
+              </button>
+            </div>
           </div>
         </div>
       </div>
