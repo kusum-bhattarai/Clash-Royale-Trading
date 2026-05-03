@@ -224,26 +224,25 @@ TEST_F(UserServiceTest, GetTradingStatsWithTrades) {
     db->execute("DELETE FROM users WHERE user_id = 'test-user-2'");
 }
 
-TEST_F(UserServiceTest, CalculateTraderLevel) {
-    // Test all level thresholds
-    EXPECT_EQ(services::UserService::calculate_trader_level(0), "CHALLENGER");
-    EXPECT_EQ(services::UserService::calculate_trader_level(50), "CHALLENGER");
-    EXPECT_EQ(services::UserService::calculate_trader_level(100), "CHALLENGER");
-    
-    EXPECT_EQ(services::UserService::calculate_trader_level(101), "MASTER");
-    EXPECT_EQ(services::UserService::calculate_trader_level(300), "MASTER");
-    EXPECT_EQ(services::UserService::calculate_trader_level(500), "MASTER");
-    
-    EXPECT_EQ(services::UserService::calculate_trader_level(501), "CHAMPION");
-    EXPECT_EQ(services::UserService::calculate_trader_level(1000), "CHAMPION");
-    EXPECT_EQ(services::UserService::calculate_trader_level(2000), "CHAMPION");
-    
-    EXPECT_EQ(services::UserService::calculate_trader_level(2001), "GRAND_CHAMPION");
-    EXPECT_EQ(services::UserService::calculate_trader_level(5000), "GRAND_CHAMPION");
-    EXPECT_EQ(services::UserService::calculate_trader_level(10000), "GRAND_CHAMPION");
-    
-    EXPECT_EQ(services::UserService::calculate_trader_level(10001), "ULTIMATE_CHAMPION");
-    EXPECT_EQ(services::UserService::calculate_trader_level(50000), "ULTIMATE_CHAMPION");
+TEST_F(UserServiceTest, ComputeRankFromXP) {
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(0),     "Goblin Stadium");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(50),    "Goblin Stadium");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(99),    "Goblin Stadium");
+
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(100),   "Challenger");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(300),   "Challenger");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(499),   "Challenger");
+
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(500),   "Master");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(1000),  "Master");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(1999),  "Master");
+
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(2000),  "Grand Champion");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(5000),  "Grand Champion");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(9999),  "Grand Champion");
+
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(10000), "Ultimate Champion");
+    EXPECT_EQ(services::UserService::compute_rank_from_xp(50000), "Ultimate Champion");
 }
 
 TEST_F(UserServiceTest, PortfolioWithNullPrices) {
