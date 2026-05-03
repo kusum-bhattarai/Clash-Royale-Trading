@@ -9,6 +9,7 @@ import type {
   PlaceOrderRequest,
   PlaceOrderResponse,
   Portfolio,
+  PriceData,
   TradingStats,
   OrderBookSnapshot,
   Trade,
@@ -53,16 +54,24 @@ export const cardsAPI = {
 
   // Get recent trades for a card (supports ?limit= and ?offset= pagination)
   getTrades: async (cardId: string, limit = 50, offset = 0): Promise<Trade[]> => {
-    const response = await apiClient.get<Trade[]>(
+    const response = await apiClient.get<{ trades: Trade[] }>(
       `/api/v1/cards/${cardId}/trades?limit=${limit}&offset=${offset}`
     );
-    return response.data;
+    return response.data.trades ?? [];
   },
 
   // Get market microstructure analytics for a card
   getAnalytics: async (cardId: string): Promise<AnalyticsSnapshot> => {
     const response = await apiClient.get<AnalyticsSnapshot>(
       `/api/v1/cards/${cardId}/analytics`
+    );
+    return response.data;
+  },
+
+  // Get dynamic reference price and factor breakdown for a card
+  getPrice: async (cardId: string): Promise<PriceData> => {
+    const response = await apiClient.get<PriceData>(
+      `/api/v1/cards/${cardId}/price`
     );
     return response.data;
   },
@@ -106,10 +115,10 @@ export const usersAPI = {
 
   // Get user's trade history (supports ?limit= and ?offset= pagination)
   getTrades: async (userId: string, limit = 50, offset = 0): Promise<Trade[]> => {
-    const response = await apiClient.get<Trade[]>(
+    const response = await apiClient.get<{ trades: Trade[] }>(
       `/api/v1/users/${userId}/trades?limit=${limit}&offset=${offset}`
     );
-    return response.data;
+    return response.data.trades ?? [];
   },
 
   // Get user's trading statistics

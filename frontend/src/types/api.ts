@@ -6,6 +6,7 @@ export interface User {
   gold_balance: number;
   trader_level: string;
   total_trades: number;
+  xp: number;
 }
 
 // Login request payload
@@ -29,6 +30,9 @@ export interface AuthResponse {
     username: string;
     email: string;
     gold_balance: number;
+    trader_level?: string;
+    total_trades?: number;
+    xp?: number;
   };
 }
 
@@ -134,6 +138,18 @@ export interface TradingStats {
   buy_count: number;
   sell_count: number;
   trader_level: string;
+  xp: number;
+}
+
+// Dynamic pricing reference price and factor breakdown
+export interface PriceData {
+  reference_price: number;
+  factors: {
+    base: number;
+    sd: number;
+    meta: number;
+    vol_discount: number;
+  };
 }
 
 // Market microstructure analytics for a card
