@@ -103,7 +103,7 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/cards/${cardId}/candles?timeframe=${timeframe}&limit=500`
+        `http://localhost:8080/api/v1/cards/${cardId}/candles?timeframe=${timeframe}&limit=500`
       );
 
       if (!response.ok) {
@@ -111,7 +111,8 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
       }
 
       const data = await response.json();
-      const candles: Candle[] = data.candles;
+      const candles: Candle[] = (data.candles as Candle[])
+        .sort((a, b) => a.timestamp - b.timestamp);
 
       if (candles.length === 0) {
         setError('No price data yet. Make some trades to generate charts!');

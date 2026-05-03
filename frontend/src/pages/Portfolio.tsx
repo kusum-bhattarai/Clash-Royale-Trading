@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { usersAPI, ordersAPI } from '../services/api';
-import type { Portfolio, Order } from '../types/api';
+import { usersAPI, ordersAPI, cardsAPI } from '../services/api';
+import type { Portfolio, Order, Card } from '../types/api';
 
 export default function PortfolioPage() {
   const { user, logout } = useAuth();
@@ -10,6 +10,7 @@ export default function PortfolioPage() {
 
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [cardMap, setCardMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
@@ -29,10 +30,12 @@ export default function PortfolioPage() {
   try {
     console.log('[Portfolio] Loading data for user:', user.user_id);
     
-    const [portfolioData, ordersResponse] = await Promise.all([
+    const [portfolioData, ordersResponse, cards] = await Promise.all([
       usersAPI.getPortfolio(user.user_id),
       usersAPI.getOrders(user.user_id),
+      cardsAPI.getAll(),
     ]);
+    setCardMap(Object.fromEntries(cards.map((c: Card) => [c.card_id, c.name])));
 
     console.log('[Portfolio] Portfolio data:', portfolioData);
     console.log('[Portfolio] Orders response:', ordersResponse);
@@ -321,7 +324,7 @@ export default function PortfolioPage() {
                       className="border-b border-slate-800 hover:bg-slate-800/50 transition"
                     >
                       <td className="py-3 px-4 text-white font-bold">
-                        {order.card_id}
+                        {cardMap[order.card_id] ?? order.card_id}
                       </td>
                       <td className="py-3 px-4">
                         <span
