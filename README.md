@@ -127,28 +127,64 @@ Trade timestamps are floored to period boundaries (`timestamp_ms - timestamp_ms 
 
 ## Quick Start
 
-**Prerequisites**: Docker, CMake 3.20+, vcpkg
+**Prerequisites**: Docker, CMake 3.20+, vcpkg, Node 18+, Python 3.9+
 
 ```bash
 # 1. Start PostgreSQL + Redis
 docker-compose up -d
 
-# 2. Build backend (Release)
-cd backend
-cmake -B build -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
-cmake --build build -j$(nproc)
+# 2. Build backend
+make                    # uses the root Makefile
+# or manually:
+# cmake -B backend/build -DCMAKE_BUILD_TYPE=Release \
+#       -DCMAKE_TOOLCHAIN_FILE=backend/vcpkg/scripts/buildsystems/vcpkg.cmake
+# cmake --build backend/build -j$(nproc)
 
-# 3. Run server (from backend/)
-./build/bin/clash_trading
+# 3. Run server
+./backend/build/clash_trading
 
-# 4. Start frontend
-cd ../frontend
-npm install && npm run dev
+# 4. Start frontend (separate terminal)
+cd frontend && npm install && npm run dev
 ```
 
-Frontend: http://localhost:5173  
-API: http://localhost:8080
+Frontend: http://localhost:5173 · API: http://localhost:8080 · WebSocket: ws://localhost:8081
+
+### First-time setup
+
+**Apply DB migrations** (run once after `docker-compose up -d`):
+```bash
+docker exec -i clash_trading_postgres psql -U clash_user -d clash_trading \
+  < backend/database/migrations/003_xp_rank.sql
+```
+
+**Register two accounts** at http://localhost:5173/register, then seed their inventory:
+```bash
+docker exec -i clash_trading_postgres psql -U clash_user -d clash_trading << 'EOF'
+INSERT INTO user_inventory (user_id, card_id, quantity, avg_purchase_price)
+SELECT u.user_id, v.card_id, v.qty, v.price
+FROM users u
+CROSS JOIN (VALUES
+  ('26000000', 50,    100.00),
+  ('26000072', 20,  2000.00),
+  ('28000000', 10, 10000.00),
+  ('26000001', 30,    100.00)
+) AS v(card_id, qty, price)
+ON CONFLICT (user_id, card_id) DO UPDATE
+  SET quantity = user_inventory.quantity + EXCLUDED.quantity;
+EOF
+```
+
+**Generate candlestick chart data** (requires the server running):
+```bash
+pip3 install requests
+# edit --rounds / --delay, and update username/password in the script if needed
+python3 backend/scripts/simulate_trades.py --rounds 60 --delay 1
+```
+
+### Testing a trade
+1. **Window 1**: Trading → select Knight → SELL → LIMIT → price `150` → qty `3` → Submit
+2. **Window 2**: Trading → select Knight → BUY → MARKET → qty `3` → Submit
+3. Toast shows "3 Knight(s) bought!". Gold updates in both windows within ~3 seconds.
 
 ---
 
