@@ -39,14 +39,15 @@ struct Portfolio {
 
 // trading stats for a user
 struct TradingStats {
-    int total_trades;               // Total number of trades
-    int64_t total_volume;           // Total gold traded (sum of all trade values)
-    int buy_count;                  // Number of buy trades
-    int sell_count;                 // Number of sell trades
-    std::string trader_level;       // NOVICE, MERCHANT, BARON, TYCOON, LEGEND
-    
-    TradingStats() : total_trades(0), total_volume(0), 
-                     buy_count(0), sell_count(0), trader_level("NOVICE") {}
+    int total_trades;
+    int64_t total_volume;
+    int buy_count;
+    int sell_count;
+    std::string trader_level;
+    int xp;
+
+    TradingStats() : total_trades(0), total_volume(0),
+                     buy_count(0), sell_count(0), trader_level("Goblin Stadium"), xp(0) {}
 };
 
 // basic user info
@@ -57,8 +58,9 @@ struct User {
     int64_t gold_balance;
     std::string trader_level;
     int total_trades;
-    
-    User() : gold_balance(0), total_trades(0) {}
+    int xp;
+
+    User() : gold_balance(0), total_trades(0), xp(0) {}
 };
 
 // Service for user-related operations
@@ -78,8 +80,8 @@ public:
     // get user's trading stats
     TradingStats get_trading_stats(const std::string& user_id) const;
     
-    // calculate trader level based on total trades
-    static std::string calculate_trader_level(int total_trades);
+    // compute CR rank from XP (Goblin Stadium → Challenger → Master → Grand Champion → Ultimate Champion)
+    static std::string compute_rank_from_xp(int xp);
     
 private:
     User parse_user_from_row(const pqxx::row& row) const;

@@ -11,7 +11,7 @@ std::optional<User> UserService::get_user(const std::string& user_id) const {
     // Using parameterized query instead of string concatenation
     auto result = db_->with_transaction([&](pqxx::work& txn) {
         return txn.exec_params(
-            "SELECT user_id, username, email, gold_balance, trader_level, total_trades "
+            "SELECT user_id, username, email, gold_balance, trader_level, total_trades, xp "
             "FROM users WHERE user_id = $1",
             user_id
         );
@@ -96,7 +96,7 @@ TradingStats UserService::get_trading_stats(const std::string& user_id) const {
     // Using parameterized query for user stats
     auto user_result = db_->with_transaction([&](pqxx::work& txn) {
         return txn.exec_params(
-            "SELECT trader_level, total_trades FROM users WHERE user_id = $1",
+            "SELECT trader_level, total_trades, xp FROM users WHERE user_id = $1",
             user_id
         );
     });
@@ -107,13 +107,14 @@ TradingStats UserService::get_trading_stats(const std::string& user_id) const {
     
     stats.trader_level = user_result[0]["trader_level"].as<std::string>();
     stats.total_trades = user_result[0]["total_trades"].as<int>();
+    stats.xp = user_result[0]["xp"].as<int>();
     
     // Using parameterized query for trades stats
     auto trades_result = db_->with_transaction([&](pqxx::work& txn) {
         return txn.exec_params(
             "SELECT "
             "  COUNT(*) as total_count, "
-            "  COALESCE(SUM(total_value), 0) as total_vol, "
+            "  CAST(COALESCE(SUM(total_value), 0) AS BIGINT) as total_vol, "
             "  COALESCE(SUM(CASE WHEN buyer_id = $1 THEN 1 ELSE 0 END), 0) as buys, "
             "  COALESCE(SUM(CASE WHEN seller_id = $1 THEN 1 ELSE 0 END), 0) as sells "
             "FROM trades "
@@ -139,18 +140,12 @@ TradingStats UserService::get_trading_stats(const std::string& user_id) const {
     return stats;
 }
 
-std::string UserService::calculate_trader_level(int total_trades) {
-    if (total_trades >= 10001) {
-        return "ULTIMATE_CHAMPION";  // Highest rank in CR
-    } else if (total_trades >= 2001) {
-        return "GRAND_CHAMPION";
-    } else if (total_trades >= 501) {
-        return "CHAMPION";
-    } else if (total_trades >= 101) {
-        return "MASTER";
-    } else {
-        return "CHALLENGER";
-    }
+std::string UserService::compute_rank_from_xp(int xp) {
+    if (xp >= 10000) return "Ultimate Champion";
+    if (xp >= 2000)  return "Grand Champion";
+    if (xp >= 500)   return "Master";
+    if (xp >= 100)   return "Challenger";
+    return "Goblin Stadium";
 }
 
 User UserService::parse_user_from_row(const pqxx::row& row) const {
@@ -161,6 +156,7 @@ User UserService::parse_user_from_row(const pqxx::row& row) const {
     user.gold_balance = row["gold_balance"].as<int64_t>();
     user.trader_level = row["trader_level"].as<std::string>();
     user.total_trades = row["total_trades"].as<int>();
+    user.xp = row["xp"].as<int>();
     return user;
 }
 
