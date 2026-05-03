@@ -10,7 +10,9 @@ namespace services {
 OrderService::OrderService(std::shared_ptr<database::PostgresClient> db,
                            std::shared_ptr<TradeService> trade_service,
                            std::shared_ptr<UserService> user_service)
-    : db_(db), trade_service_(trade_service), user_service_(user_service) {}
+    : db_(db), trade_service_(trade_service), user_service_(user_service) {
+    load_pending_orders();
+}
 
 std::string OrderService::generate_order_id() const {
     uuid_t uuid;
@@ -361,6 +363,35 @@ core::Order OrderService::parse_order_from_row(const pqxx::row& row) const {
     order.timestamp = std::chrono::system_clock::now();
     
     return order;
+}
+
+void OrderService::load_pending_orders() {
+    try {
+        auto result = db_->with_transaction([&](pqxx::work& txn) {
+            return txn.exec(
+                "SELECT order_id, user_id, card_id, order_type, order_mode, "
+                "price, quantity, filled_quantity, status "
+                "FROM orders WHERE status IN ('PENDING', 'PARTIAL') "
+                "ORDER BY created_at ASC"
+            );
+        });
+
+        int loaded = 0;
+        for (const auto& row : result) {
+            core::Order order = parse_order_from_row(row);
+            // Only LIMIT orders rest in the book; MARKET orders that are still
+            // PENDING are stale (server crashed mid-match) — skip them.
+            if (order.mode != core::OrderMode::LIMIT) continue;
+
+            auto order_book = get_or_create_order_book(order.card_id);
+            order_book->add_order(order);
+            ++loaded;
+        }
+
+        LOG_INFO("[STARTUP] Loaded {} pending orders into in-memory order books", loaded);
+    } catch (const std::exception& e) {
+        LOG_ERROR("[STARTUP] Failed to load pending orders: {}", e.what());
+    }
 }
 
 } // namespace services
