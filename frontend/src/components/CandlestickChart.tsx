@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart} from 'lightweight-charts';
+import { createChart } from 'lightweight-charts';
 
 interface CandlestickChartProps {
   cardId: string;
@@ -18,164 +18,135 @@ interface Candle {
 
 type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
+const TIMEFRAMES: { value: Timeframe; label: string }[] = [
+  { value: '1m',  label: '1M'  },
+  { value: '5m',  label: '5M'  },
+  { value: '15m', label: '15M' },
+  { value: '1h',  label: '1H'  },
+  { value: '4h',  label: '4H'  },
+  { value: '1d',  label: '1D'  },
+];
+
 export default function CandlestickChart({ cardId, cardName }: CandlestickChartProps) {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const candlestickSeriesRef = useRef<any>(null);
+  const wrapperRef      = useRef<HTMLDivElement>(null);
+  const chartAreaRef    = useRef<HTMLDivElement>(null);
+  const chartRef        = useRef<any>(null);
+  const candleSeriesRef = useRef<any>(null);
   const volumeSeriesRef = useRef<any>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!chartAreaRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 400,
+    const chart = createChart(chartAreaRef.current, {
+      width:  chartAreaRef.current.clientWidth  || 600,
+      height: chartAreaRef.current.clientHeight || 300,
       layout: {
-        background: { color: 'transparent' },
-        textColor: '#9ca3af',
+        background:  { color: 'transparent' },
+        textColor:   '#64748b',
       },
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.1)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.1)' },
+        vertLines: { color: 'rgba(99, 102, 241, 0.06)' },
+        horzLines: { color: 'rgba(99, 102, 241, 0.06)' },
       },
-      crosshair: {
-        mode: 1,
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(148, 163, 184, 0.3)',
-      },
+      crosshair: { mode: 1 },
+      rightPriceScale: { borderColor: 'rgba(99, 102, 241, 0.2)' },
       timeScale: {
-        borderColor: 'rgba(148, 163, 184, 0.3)',
-        timeVisible: true,
+        borderColor:    'rgba(99, 102, 241, 0.2)',
+        timeVisible:    true,
         secondsVisible: false,
       },
     });
 
     chartRef.current = chart;
 
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
+    candleSeriesRef.current = chart.addCandlestickSeries({
+      upColor:      '#00ff88',
+      downColor:    '#ff3b5c',
       borderVisible: false,
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      wickUpColor:   '#00ff88',
+      wickDownColor: '#ff3b5c',
     });
 
-    candlestickSeriesRef.current = candlestickSeries;
-
-    const volumeSeries = chart.addHistogramSeries({
-      color: '#64748b',
-      priceFormat: {
-        type: 'volume',
-      },
+    volumeSeriesRef.current = chart.addHistogramSeries({
+      color:       '#64748b',
+      priceFormat: { type: 'volume' },
       priceScaleId: '',
     });
 
-    volumeSeriesRef.current = volumeSeries;
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
+    // ResizeObserver picks up flex layout changes that window resize misses
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) {
+        chart.applyOptions({ width, height });
       }
-    };
-
-    window.addEventListener('resize', handleResize);
+    });
+    ro.observe(chartAreaRef.current);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       chart.remove();
     };
   }, []);
 
-  useEffect(() => {
-    fetchCandles();
-  }, [cardId, timeframe]);
+  useEffect(() => { fetchCandles(); }, [cardId, timeframe]);
 
   const fetchCandles = async () => {
     setLoading(true);
     setError('');
-
     try {
-      const response = await fetch(
+      const res = await fetch(
         `http://localhost:8080/api/v1/cards/${cardId}/candles?timeframe=${timeframe}&limit=500`
       );
+      if (!res.ok) throw new Error('Failed to fetch candles');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch candles');
-      }
-
-      const data = await response.json();
-      const candles: Candle[] = (data.candles as Candle[])
-        .sort((a, b) => a.timestamp - b.timestamp);
+      const data = await res.json();
+      const candles: Candle[] = (data.candles as Candle[]).sort((a, b) => a.timestamp - b.timestamp);
 
       if (candles.length === 0) {
-        setError('No price data yet. Make some trades to generate charts!');
+        setError('No price data yet — make some trades to generate charts!');
         setLoading(false);
         return;
       }
 
-      const candlestickData = candles.map(candle => ({
-        time: candle.timestamp,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      }));
-
-      const volumeData = candles.map(candle => ({
-        time: candle.timestamp,
-        value: candle.volume,
-        color: candle.close >= candle.open ? '#22c55e40' : '#ef444440',
-      }));
-
-      if (candlestickSeriesRef.current && volumeSeriesRef.current) {
-        candlestickSeriesRef.current.setData(candlestickData);
-        volumeSeriesRef.current.setData(volumeData);
-        
-        if (chartRef.current) {
-          chartRef.current.timeScale().fitContent();
-        }
-      }
-
+      candleSeriesRef.current?.setData(
+        candles.map(c => ({ time: c.timestamp, open: c.open, high: c.high, low: c.low, close: c.close }))
+      );
+      volumeSeriesRef.current?.setData(
+        candles.map(c => ({
+          time:  c.timestamp,
+          value: c.volume,
+          color: c.close >= c.open ? '#00ff8830' : '#ff3b5c30',
+        }))
+      );
+      chartRef.current?.timeScale().fitContent();
       setLoading(false);
     } catch (err: any) {
-      console.error('Failed to fetch candles:', err);
       setError(err.message || 'Failed to load chart data');
       setLoading(false);
     }
   };
 
-  const timeframes: { value: Timeframe; label: string }[] = [
-    { value: '1m', label: '1M' },
-    { value: '5m', label: '5M' },
-    { value: '15m', label: '15M' },
-    { value: '1h', label: '1H' },
-    { value: '4h', label: '4H' },
-    { value: '1d', label: '1D' },
-  ];
-
   return (
-    <div className="bg-slate-900/80 border-2 border-orange-500/30 rounded-xl p-6 backdrop-blur-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-orange-400 font-black uppercase tracking-wider text-lg">
-          Price Chart - {cardName}
-        </h2>
+    <div ref={wrapperRef} className="h-full flex flex-col overflow-hidden">
 
-        <div className="flex gap-2">
-          {timeframes.map(tf => (
+      {/* Header */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-1.5 border-b border-arena-border">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          Price Chart — <span className="text-slate-300">{cardName}</span>
+        </p>
+        <div className="flex gap-1">
+          {TIMEFRAMES.map(tf => (
             <button
               key={tf.value}
               onClick={() => setTimeframe(tf.value)}
-              className={`px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide border-2 transition ${
+              className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded transition ${
                 timeframe === tf.value
-                  ? 'bg-orange-500 text-white border-orange-400'
-                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-orange-500/50'
+                  ? 'bg-neon-gold/20 text-neon-gold border border-neon-gold/40'
+                  : 'text-slate-600 border border-transparent hover:text-slate-400'
               }`}
             >
               {tf.label}
@@ -184,28 +155,26 @@ export default function CandlestickChart({ cardId, cardName }: CandlestickChartP
         </div>
       </div>
 
-      <div className="relative">
+      {/* Chart area — fills remaining height */}
+      <div ref={chartAreaRef} className="flex-1 relative overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/50 rounded-lg z-10">
-            <p className="text-slate-400 font-bold">Loading chart...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-arena-bg/70 z-10">
+            <p className="text-slate-500 text-xs uppercase tracking-widest animate-pulse">Loading…</p>
           </div>
         )}
-
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/50 rounded-lg z-10">
+        {error && !loading && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="text-center">
-              <p className="text-orange-400 font-bold mb-2">{error}</p>
+              <p className="text-slate-500 text-xs mb-3">{error}</p>
               <button
                 onClick={fetchCandles}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600"
+                className="px-3 py-1 text-xs font-bold uppercase tracking-wide text-neon-gold border border-neon-gold/30 rounded hover:border-neon-gold/60 transition"
               >
                 Retry
               </button>
             </div>
           </div>
         )}
-
-        <div ref={chartContainerRef} className="rounded-lg overflow-hidden" />
       </div>
     </div>
   );

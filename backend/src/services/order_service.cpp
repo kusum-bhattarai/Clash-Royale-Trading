@@ -125,13 +125,10 @@ bool OrderService::cancel_order(const std::string& order_id, const std::string& 
         );
     }
     
-    // Check if order can be cancelled (must be PENDING or PARTIAL)
-    if (order.status == core::OrderStatus::FILLED) {
-        throw std::runtime_error("Cannot cancel order: already filled");
-    }
-    
-    if (order.status == core::OrderStatus::CANCELLED) {
-        return false; // Already cancelled
+    // Only PENDING or PARTIAL orders can be cancelled
+    if (order.status == core::OrderStatus::FILLED ||
+        order.status == core::OrderStatus::CANCELLED) {
+        return false;
     }
     
     // Remove from OrderBook

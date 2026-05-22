@@ -42,7 +42,7 @@ export default function Register() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-gold via-orange-400 to-neon-gold uppercase tracking-widest mb-2">
+          <h1 className="text-4xl font-display text-transparent bg-clip-text bg-gradient-to-r from-neon-gold via-orange-400 to-neon-gold uppercase tracking-widest mb-2">
             CR Exchange
           </h1>
           <p className="text-slate-500 text-sm uppercase tracking-widest">Create your account</p>

@@ -6,6 +6,11 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'display': ['Russo One', 'sans-serif'],
+        'sans': ['Rajdhani', 'sans-serif'],
+        'mono': ['JetBrains Mono', 'monospace'],
+      },
       colors: {
         'clash-blue': '#3b82f6',
         'clash-gold': '#fbbf24',
