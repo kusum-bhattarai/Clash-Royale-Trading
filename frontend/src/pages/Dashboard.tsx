@@ -37,7 +37,7 @@ export default function Dashboard() {
       <nav className="border-b border-arena-border bg-arena-surface/80 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-orange-400 uppercase tracking-widest">
+            <h1 className="text-sm font-display text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-orange-400 uppercase tracking-widest">
               CR Exchange
             </h1>
             {[{ label: 'Dashboard', path: '/dashboard', active: true }, { label: 'Trading', path: '/trading' }, { label: 'Portfolio', path: '/portfolio' }].map(({ label, path, active }) => (

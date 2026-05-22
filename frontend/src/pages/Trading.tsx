@@ -170,9 +170,10 @@ export default function Trading() {
 
       {/* ── HEADER ── */}
       <header className="h-12 flex-shrink-0 flex items-center px-4 gap-4 border-b border-arena-border bg-arena-surface/80 backdrop-blur-sm">
-        <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-gold via-orange-400 to-neon-gold uppercase tracking-widest flex-shrink-0">
+        <h1 className="text-sm font-display text-transparent bg-clip-text bg-gradient-to-r from-neon-gold via-orange-400 to-neon-gold uppercase tracking-widest flex-shrink-0">
           CR Exchange
         </h1>
+
 
         {selectedCard && (
           <div className="flex items-center gap-2 flex-shrink-0">
