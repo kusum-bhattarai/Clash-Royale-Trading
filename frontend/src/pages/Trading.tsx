@@ -24,6 +24,15 @@ const RARITY_COLORS: Record<string, string> = {
   champion: 'text-cyan-400 border-cyan-400',
 };
 
+const RARITY_ACTIVE: Record<string, string> = {
+  All:       'bg-slate-700 text-white border-slate-500',
+  common:    'bg-transparent text-slate-400 border-slate-400',
+  rare:      'bg-transparent text-orange-400 border-orange-400',
+  epic:      'bg-transparent text-purple-400 border-purple-400',
+  legendary: 'bg-transparent text-yellow-400 border-yellow-400',
+  champion:  'bg-transparent text-cyan-400 border-cyan-400',
+};
+
 export default function Trading() {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -217,9 +226,7 @@ export default function Trading() {
                 onClick={() => setRarityFilter(r)}
                 className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border transition ${
                   rarityFilter === r
-                    ? r === 'All'
-                      ? 'bg-slate-700 text-white border-slate-500'
-                      : `bg-transparent text-${r === 'champion' ? 'cyan' : r === 'legendary' ? 'yellow' : r === 'epic' ? 'purple' : r === 'rare' ? 'orange' : 'slate'}-400 border-${r === 'champion' ? 'cyan' : r === 'legendary' ? 'yellow' : r === 'epic' ? 'purple' : r === 'rare' ? 'orange' : 'slate'}-400`
+                    ? RARITY_ACTIVE[r]
                     : 'text-slate-600 border-slate-800 hover:text-slate-400'
                 }`}
               >
