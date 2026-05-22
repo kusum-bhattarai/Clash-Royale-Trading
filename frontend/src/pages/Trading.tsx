@@ -284,8 +284,8 @@ export default function Trading() {
             <FairValueIndicator cardId={selectedCard.card_id} lastPrice={lastTradePrice} />
           )}
 
-          {/* Candlestick chart — fixed portion of the height */}
-          <div className="h-[280px] flex-shrink-0 border-b border-arena-border">
+          {/* Candlestick chart — grows to fill available space */}
+          <div className="flex-1 min-h-0 border-b border-arena-border overflow-hidden">
             {selectedCard ? (
               <CandlestickChart cardId={selectedCard.card_id} cardName={selectedCard.name} />
             ) : (
@@ -293,9 +293,9 @@ export default function Trading() {
             )}
           </div>
 
-          {/* Analytics strip — scrolls if it overflows */}
+          {/* Analytics strip — fixed to its content height, no dead gap */}
           {selectedCard && (
-            <div className="flex-1 overflow-y-auto arena-scroll border-b border-arena-border min-h-0">
+            <div className="flex-shrink-0 border-b border-arena-border">
               <AnalyticsStrip cardId={selectedCard.card_id} />
             </div>
           )}
