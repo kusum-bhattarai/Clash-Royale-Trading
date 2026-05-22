@@ -399,7 +399,7 @@ void APIRouter::handle_cancel_order(const http_request& req, http_response& res)
             send_json(res, http::status::ok, {{"success", true}});
         } else {
             send_error(res, http::status::not_found,
-                       "ORDER_NOT_FOUND", "Order not found or already cancelled",
+                       "ORDER_NOT_FOUND", "Order not found or cannot be cancelled (already filled or cancelled)",
                        error_codes::RESOURCE_NOT_FOUND);
         }
 

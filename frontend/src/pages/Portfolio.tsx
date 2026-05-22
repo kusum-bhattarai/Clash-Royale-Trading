@@ -68,6 +68,7 @@ export default function PortfolioPage() {
       console.error('Failed to cancel order:', err);
       setError(err.response?.data?.error || 'Failed to cancel order');
       setTimeout(() => setError(''), 3000);
+      await loadPortfolioData();
     } finally {
       setCancellingOrderId(null);
     }
