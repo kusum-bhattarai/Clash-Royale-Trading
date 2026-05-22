@@ -5,9 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { usersAPI, cardsAPI } from '../services/api';
 import type { Trade, Card } from '../types/api';
 import RankBadge from '../components/RankBadge';
+import NavBar from '../components/NavBar';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
@@ -33,31 +34,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-arena-bg hex-grid-bg text-white">
 
-      {/* Nav */}
-      <nav className="border-b border-arena-border bg-arena-surface/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <h1 className="text-sm font-display text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-orange-400 uppercase tracking-widest">
-              CR Exchange
-            </h1>
-            {[{ label: 'Dashboard', path: '/dashboard', active: true }, { label: 'Trading', path: '/trading' }, { label: 'Portfolio', path: '/portfolio' }].map(({ label, path, active }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className={`text-xs font-bold uppercase tracking-wide transition ${active ? 'text-white border-b-2 border-neon-gold pb-0.5' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-4">
-            {user && <RankBadge rank={user.trader_level || 'Goblin Stadium'} xp={user.xp ?? 0} compact />}
-            <button onClick={() => { logout(); navigate('/login'); }} className="text-xs text-bear-red/70 border border-bear-red/30 rounded px-3 py-1 hover:border-bear-red hover:text-bear-red transition uppercase tracking-wide">
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+      <NavBar activePage="dashboard" />
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
