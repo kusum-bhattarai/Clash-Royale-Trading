@@ -8,6 +8,22 @@ Built with a C++ matching engine, PostgreSQL settlement layer, and a React/TypeS
 
 ---
 
+## Screenshots
+
+**Dashboard** — rank progression, gold balance, recent trade history, and top cards by usage rate.
+
+![Dashboard](assets/crt1.png)
+
+**Trading Interface** — live candlestick chart, real-time order book, depth chart, market analytics, and order placement.
+
+![Trading Interface](assets/crt2.png)
+
+**Portfolio** — card holdings with unrealized P&L, average cost basis, and active order management.
+
+![Portfolio](assets/crt3.png)
+
+---
+
 ## Performance
 
 Benchmarked with [Google Benchmark](https://github.com/google/benchmark). CI numbers (Linux x86, 2 vCPU GitHub runner) are the reproducible baseline; local numbers are on Apple M-series.
